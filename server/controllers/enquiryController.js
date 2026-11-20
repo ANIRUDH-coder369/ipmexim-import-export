@@ -11,20 +11,19 @@ const {
 // @access  Public (Rate limited)
 const createEnquiry = async (req, res) => {
   try {
-    const {
-      fullName,
-      corporateEmail,
-      company,
-      destinationCountry,
-      phoneWhatsApp,
-      productOfInterest,
-      estimatedQuantity,
-      unit,
-      preferredIncoterm,
-      destinationPort,
-      technicalSpecifications,
-      consent
-    } = req.body;
+    // Gracefully normalize field variations across all client forms
+    const fullName = (req.body.fullName || req.body.name || '').trim();
+    const corporateEmail = (req.body.corporateEmail || req.body.businessEmail || req.body.email || '').toLowerCase().trim();
+    const company = (req.body.company || req.body.companyName || '').trim();
+    const destinationCountry = (req.body.destinationCountry || req.body.country || '').trim();
+    const phoneWhatsApp = (req.body.phoneWhatsApp || req.body.phone || '').trim();
+    const productOfInterest = (req.body.productOfInterest || req.body.productName || req.body.productLine || 'General Export Sourcing').trim();
+    const estimatedQuantity = String(req.body.estimatedQuantity || req.body.quantity || 'Standard Commercial Order').trim();
+    const unit = (req.body.unit || '').trim();
+    const preferredIncoterm = (req.body.preferredIncoterm || req.body.incoterm || 'FOB / CIF').trim();
+    const destinationPort = (req.body.destinationPort || req.body.port || destinationCountry || 'Main Port').trim();
+    const technicalSpecifications = (req.body.technicalSpecifications || req.body.message || req.body.specifications || 'Commercial Export Quotation Request').trim();
+    const consent = req.body.consent !== undefined ? req.body.consent : true;
 
     // Consent validation (can be string 'true' or boolean true from multipart form)
     const isConsentGiven = consent === true || consent === 'true' || consent === '1' || consent === 'on';
@@ -70,17 +69,17 @@ const createEnquiry = async (req, res) => {
     }
 
     const enquiry = await Enquiry.create({
-      fullName: fullName.trim(),
-      corporateEmail: corporateEmail.toLowerCase().trim(),
-      company: company ? company.trim() : '',
-      destinationCountry: destinationCountry.trim(),
-      phoneWhatsApp: phoneWhatsApp ? phoneWhatsApp.trim() : '',
-      productOfInterest: productOfInterest ? productOfInterest.trim() : 'General / Custom Sourcing Requirement',
-      estimatedQuantity: String(estimatedQuantity).trim(),
-      unit: unit ? unit.trim() : '',
-      preferredIncoterm: preferredIncoterm ? preferredIncoterm.trim() : '',
-      destinationPort: destinationPort.trim(),
-      technicalSpecifications: technicalSpecifications.trim(),
+      fullName,
+      corporateEmail,
+      company,
+      destinationCountry,
+      phoneWhatsApp,
+      productOfInterest,
+      estimatedQuantity,
+      unit,
+      preferredIncoterm,
+      destinationPort,
+      technicalSpecifications,
       attachment: attachmentData,
       consent: true,
       ipAddress: req.ip || req.connection?.remoteAddress || ''

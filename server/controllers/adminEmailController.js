@@ -9,7 +9,7 @@ const sendCustomerEmail = async (req, res) => {
     const params = req.params || {};
     const body = req.body || {};
     const quotationId = params.id || body.quotationId;
-    let targetEmail = body.customerEmail || body.toEmail;
+    let targetEmail = body.customerEmail || body.toEmail || body.recipientEmail || body.email;
     const { subject, message, updateStatus, html } = body;
 
     if (!subject || (!message && !html)) {
@@ -22,15 +22,9 @@ const sendCustomerEmail = async (req, res) => {
     let quotation = null;
     if (quotationId) {
       quotation = await Quotation.findById(quotationId);
-      if (!quotation) {
-        return res.status(404).json({
-          success: false,
-          message: `Quotation not found with ID: ${quotationId}`
-        });
-      }
       // If admin didn't manually type the customer email, use the one submitted by customer
-      if (!targetEmail) {
-        targetEmail = quotation.corporateEmail;
+      if (!targetEmail && quotation) {
+        targetEmail = quotation.corporateEmail || quotation.email;
       }
     }
 

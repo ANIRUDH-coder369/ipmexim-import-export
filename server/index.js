@@ -5,6 +5,7 @@ const connectDB = require('./config/db');
 const adminRoutes = require('./routes/adminRoutes');
 const enquiryRoutes = require('./routes/enquiryRoutes');
 const seoRoutes = require('./routes/seoRoutes');
+const productLineRoutes = require('./routes/productLineRoutes');
 const {
   helmetMiddleware,
   sanitizeInputMiddleware,
@@ -66,6 +67,10 @@ app.use('/enquiries', enquiryRoutes);
 app.use('/admin/enquiries', enquiryRoutes);
 app.use('/api/quotations', enquiryRoutes);
 app.use('/quotations', enquiryRoutes);
+
+// Mount Product Lines / Sourcing Requirements Routes (Dynamic Quotation Options)
+app.use('/api/product-lines', productLineRoutes);
+app.use('/product-lines', productLineRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
