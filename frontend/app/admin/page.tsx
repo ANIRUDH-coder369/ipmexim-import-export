@@ -807,16 +807,41 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* User Profile & Actions */}
-          <div className="flex items-center gap-5 text-sm">
-            <Link
-              href="/"
-              className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold hover:underline"
-              style={{ color: 'var(--gold)' }}
-            >
-              <span>View Live Website</span>
-              <ExternalLink className="w-4 h-4" />
-            </Link>
+          {/* User Profile & Live Portal Actions */}
+          <div className="flex items-center gap-4 text-sm">
+            <div className="hidden sm:flex items-center gap-2">
+              <a
+                href="https://ipmexim-import-export-frontend.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border hover:border-[#D4AF69] transition-all"
+                style={{
+                  color: 'var(--gold)',
+                  borderColor: 'var(--gold-border)',
+                  backgroundColor: 'rgba(212, 175, 105, 0.08)'
+                }}
+                title="Open primary live production deployment"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] inline-block" />
+                <span>Live Website</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+              <a
+                href="https://ipmexim-import-export.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border hover:border-white/30 transition-all opacity-80 hover:opacity-100"
+                style={{
+                  color: 'var(--text-secondary)',
+                  borderColor: 'var(--border-subtle)',
+                  backgroundColor: 'var(--bg-card)'
+                }}
+                title="Open production mirror deployment"
+              >
+                <span>Live Mirror</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
 
             <div className="h-6 w-px bg-white/10 hidden sm:block" />
 

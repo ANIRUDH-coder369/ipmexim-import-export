@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Mail, Globe2, Clock, Send, CheckCircle2, ShieldCheck, Building2, Phone, MapPin, Sparkles } from 'lucide-react';
+import { Mail, Globe2, Clock, Send, CheckCircle2, ShieldCheck, Building2, Phone, MapPin, Sparkles, ExternalLink } from 'lucide-react';
 import { COMPANY_INFO } from '@/data/company';
 import { PRODUCTS } from '@/data/products';
 import { validateEnquiryForm, EnquiryFormData, ValidationErrors } from '@/utils/validation';
@@ -508,6 +508,37 @@ export default function ContactPage() {
                 <div>
                   <span className="block" style={{ color: 'var(--text-muted)' }}>International Desk Telephone:</span>
                   <span className="font-mono font-medium" style={{ color: 'var(--text-primary)' }}>{COMPANY_INFO.phone}</span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <Globe2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--gold)' }} />
+                <div className="w-full">
+                  <span className="block font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Official Web Gateways:</span>
+                  <div className="flex flex-col gap-1.5 font-mono text-[11px]">
+                    <a
+                      href="https://ipmexim-import-export-frontend.vercel.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 hover:text-gold-champagne hover:underline transition-colors"
+                      style={{ color: 'var(--text-primary)' }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] inline-block" />
+                      <span>ipmexim-import-export-frontend.vercel.app</span>
+                      <ExternalLink className="w-3 h-3 text-[#10B981]" />
+                    </a>
+                    <a
+                      href="https://ipmexim-import-export.vercel.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 hover:text-gold-champagne hover:underline transition-colors opacity-85 hover:opacity-100"
+                      style={{ color: 'var(--text-secondary)' }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] inline-block" />
+                      <span>ipmexim-import-export.vercel.app</span>
+                      <ExternalLink className="w-3 h-3 text-[#10B981]" />
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>

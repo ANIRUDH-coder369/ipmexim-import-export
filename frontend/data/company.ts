@@ -5,6 +5,12 @@ export const COMPANY_INFO = {
   legalStructure: 'Proprietorship',
   tagline: 'Connecting Global Markets. Delivering Quality from India.',
   email: 'ipmexim@gmail.com',
+  website: 'https://ipmexim-import-export-frontend.vercel.app/',
+  alternateWebsite: 'https://ipmexim-import-export.vercel.app/',
+  websites: [
+    'https://ipmexim-import-export-frontend.vercel.app/',
+    'https://ipmexim-import-export.vercel.app/'
+  ],
   phone: '+91 (Operational Line - Provided Upon Verified Enquiry)',
   country: 'India',
   operatingPorts: ['Nhava Sheva (JNPT), Mumbai', 'Mundra Port, Gujarat', 'Chennai Port, Tamil Nadu', 'Kolkata Port, West Bengal'],

@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Mail, Globe2, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Mail, Globe2, ShieldCheck, CheckCircle2, ExternalLink } from 'lucide-react';
 import { COMPANY_INFO } from '@/data/company';
 import { PRODUCT_CATEGORIES } from '@/data/products';
 import { useLanguage } from '@/context/LanguageContext';
@@ -76,6 +76,40 @@ export const Footer: React.FC = () => {
               <div className="flex items-center gap-2.5">
                 <Globe2 className="w-4 h-4 shrink-0" style={{ color: 'var(--gold)' }} />
                 <span>{t('footer.maritimeGateways')}</span>
+              </div>
+            </div>
+
+            {/* Live Web Gateways */}
+            <div className="pt-2 space-y-1.5 text-xs">
+              <span
+                className="block text-[11px] uppercase tracking-wider font-semibold"
+                style={{ color: 'var(--gold)' }}
+              >
+                Live Production Gateways
+              </span>
+              <div className="flex flex-col gap-1.5 text-[11px]">
+                <a
+                  href="https://ipmexim-import-export-frontend.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 hover:text-gold-champagne hover:underline transition-colors font-mono"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  <span className="w-2 h-2 rounded-full bg-[#10B981] inline-block shrink-0" />
+                  <span>ipmexim-import-export-frontend.vercel.app</span>
+                  <ExternalLink className="w-3 h-3 text-[#10B981]" />
+                </a>
+                <a
+                  href="https://ipmexim-import-export.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 hover:text-gold-champagne hover:underline transition-colors font-mono"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  <span className="w-2 h-2 rounded-full bg-[#10B981] inline-block shrink-0" />
+                  <span>ipmexim-import-export.vercel.app</span>
+                  <ExternalLink className="w-3 h-3 text-[#10B981]" />
+                </a>
               </div>
             </div>
 
