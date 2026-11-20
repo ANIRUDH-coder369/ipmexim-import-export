@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@theme {
+:root {
   --font-serif: "Cormorant Garamond", Georgia, serif;
   --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --color-gold-champagne: #D4AF69;
@@ -12,6 +12,14 @@
   --color-ivory: #F8F6F0;
   --color-muted-grey: #9CA3AF;
   --color-gold-border: rgba(212, 175, 105, 0.22);
+}
+
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+.font-sans {
+  font-family: var(--font-sans);
 }
 
 /* ========================================================
