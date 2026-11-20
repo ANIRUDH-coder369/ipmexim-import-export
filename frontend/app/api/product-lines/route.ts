@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 // Default product lines for serverless Vercel runtime
 const INITIAL_PRODUCT_LINES = [
   {
