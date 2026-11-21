@@ -7,6 +7,7 @@ import { GoogleTranslateEngine } from "@/components/common/GoogleTranslateEngine
 import { QuoteProvider } from "@/context/QuoteContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
+import { ReduxProvider } from "@/components/providers/ReduxProvider";
 import { OrganizationJsonLd, WebSiteJsonLd, FaqJsonLd } from "@/components/seo/JsonLd";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ipmexim-import-export-frontend.vercel.app';
@@ -201,17 +202,19 @@ export default function RootLayout({
         <FaqJsonLd />
       </head>
       <body className="min-h-screen flex flex-col antialiased transition-colors" suppressHydrationWarning>
-        <ThemeProvider>
-          <LanguageProvider>
-            <QuoteProvider>
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-              <QuoteModal />
-              <GoogleTranslateEngine />
-            </QuoteProvider>
-          </LanguageProvider>
-        </ThemeProvider>
+        <ReduxProvider>
+          <ThemeProvider>
+            <LanguageProvider>
+              <QuoteProvider>
+                <Header />
+                <main className="flex-1">{children}</main>
+                <Footer />
+                <QuoteModal />
+                <GoogleTranslateEngine />
+              </QuoteProvider>
+            </LanguageProvider>
+          </ThemeProvider>
+        </ReduxProvider>
       </body>
     </html>
   );

@@ -76,14 +76,14 @@ export const Header: React.FC = () => {
                 className="text-[9px] sm:text-[10px] uppercase tracking-[0.24em] font-sans font-bold"
                 style={{ color: 'var(--gold)' }}
               >
-                Global
+
               </span>
             </div>
             <span
               className="hidden sm:block text-[9px] uppercase tracking-widest font-sans font-medium opacity-60"
               style={{ color: 'var(--text-muted)' }}
             >
-              International Trade &bull; India Origin
+              The  International Business
             </span>
           </div>
         </Link>

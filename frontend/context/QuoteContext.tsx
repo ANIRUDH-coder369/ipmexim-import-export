@@ -1,11 +1,12 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-interface PreselectedProduct {
-  id?: string;
-  name?: string;
-}
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useAppDispatch, useAppSelector } from '@/store';
+import {
+  openQuoteModal as openModalAction,
+  closeQuoteModal as closeModalAction,
+  PreselectedProduct,
+} from '@/store/slices/quoteSlice';
 
 interface QuoteContextType {
   isOpen: boolean;
@@ -17,24 +18,22 @@ interface QuoteContextType {
 const QuoteContext = createContext<QuoteContextType | undefined>(undefined);
 
 export const QuoteProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [preselectedProduct, setPreselectedProduct] = useState<PreselectedProduct | undefined>(undefined);
+  const dispatch = useAppDispatch();
+  const { isOpen, preselectedProduct } = useAppSelector((state) => state.quote);
 
   const openQuoteModal = (product?: PreselectedProduct) => {
-    setPreselectedProduct(product);
-    setIsOpen(true);
+    dispatch(openModalAction(product));
   };
 
   const closeQuoteModal = () => {
-    setIsOpen(false);
-    setPreselectedProduct(undefined);
+    dispatch(closeModalAction());
   };
 
   return (
     <QuoteContext.Provider
       value={{
         isOpen,
-        preselectedProduct,
+        preselectedProduct: preselectedProduct || undefined,
         openQuoteModal,
         closeQuoteModal,
       }}

@@ -867,34 +867,34 @@ export default function AdminDashboardPage() {
       </header>
 
       {/* Main Container - Full Wide Layout */}
-      <main className="w-full px-6 sm:px-10 lg:px-16 2xl:px-24 py-10 space-y-10">
+      <main className="w-full px-4 sm:px-10 lg:px-16 2xl:px-24 py-6 sm:py-10 space-y-6 sm:space-y-10">
         
         {/* Top Control Tabs: Quotations vs Product Lines / Requirements (Large & Prominent) */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 border-b pb-6" style={{ borderColor: 'var(--border-subtle)' }}>
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
             <button
               onClick={() => setActiveAdminTab('quotations')}
-              className={`flex items-center gap-3 px-6 py-3.5 rounded-xl border text-sm sm:text-base font-bold tracking-wide transition-all cursor-pointer ${
+              className={`flex items-center justify-center gap-2.5 sm:gap-3 px-4 sm:px-6 py-3 sm:py-3.5 rounded-xl border text-xs sm:text-base font-bold tracking-wide transition-all cursor-pointer min-h-[44px] ${
                 activeAdminTab === 'quotations'
                   ? 'btn-glass-morphism shadow-xl'
                   : 'hover:border-gold-border/40'
               }`}
               style={activeAdminTab !== 'quotations' ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)', color: 'var(--text-secondary)' } : {}}
             >
-              <FileText className="w-5 h-5 text-white" />
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               <span>Quotation Inquiries ({quotations.length})</span>
             </button>
 
             <button
               onClick={() => setActiveAdminTab('productLines')}
-              className={`flex items-center gap-3 px-6 py-3.5 rounded-xl border text-sm sm:text-base font-bold tracking-wide transition-all cursor-pointer ${
+              className={`flex items-center justify-center gap-2.5 sm:gap-3 px-4 sm:px-6 py-3 sm:py-3.5 rounded-xl border text-xs sm:text-base font-bold tracking-wide transition-all cursor-pointer min-h-[44px] ${
                 activeAdminTab === 'productLines'
                   ? 'btn-glass-morphism shadow-xl'
                   : 'hover:border-gold-border/40'
               }`}
               style={activeAdminTab !== 'productLines' ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)', color: 'var(--text-secondary)' } : {}}
             >
-              <Layers className="w-5 h-5 text-white" />
+              <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               <span>Product Lines & Requirements Control ({productLines.length})</span>
             </button>
           </div>
@@ -905,7 +905,7 @@ export default function AdminDashboardPage() {
               else fetchProductLinesAdmin();
             }}
             disabled={isLoading}
-            className="inline-flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl border text-sm font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm hover:border-gold-border"
+            className="inline-flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl border text-xs sm:text-sm font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm hover:border-gold-border min-h-[44px]"
             style={{
               backgroundColor: 'var(--bg-card)',
               borderColor: 'var(--border-card)',
@@ -1031,7 +1031,7 @@ export default function AdminDashboardPage() {
               }}
             >
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-sm">
+                <table className="w-full text-left border-collapse text-sm min-w-[750px]">
                   <thead>
                     <tr className="border-b" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-topbar)' }}>
                       <th className="py-4 px-6 font-bold uppercase tracking-wider text-xs sm:text-sm" style={{ color: 'var(--gold)' }}>Ref / Date</th>
@@ -1220,7 +1220,7 @@ export default function AdminDashboardPage() {
               }}
             >
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-sm">
+                <table className="w-full text-left border-collapse text-sm min-w-[750px]">
                   <thead>
                     <tr className="border-b" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-topbar)' }}>
                       <th className="py-4 px-6 font-bold uppercase tracking-wider text-xs sm:text-sm" style={{ color: 'var(--gold)' }}>Product Line / Requirement</th>

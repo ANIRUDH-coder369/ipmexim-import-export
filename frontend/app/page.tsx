@@ -66,8 +66,8 @@ export default function HomePage() {
           <div className="absolute inset-0 hero-scrim-bottom transition-all duration-300" />
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-12 py-16 sm:py-24 lg:py-32 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-24 lg:py-32 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center">
             
             {/* Left Column: Brand Statement & CTAs */}
             <div className="lg:col-span-7 space-y-6">
@@ -90,13 +90,13 @@ export default function HomePage() {
                 <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wider uppercase pr-2">
                   <span style={{ color: 'var(--gold)' }}>IPM EXIM</span>
                   <span className="opacity-30 text-white">&bull;</span>
-                  <span className="text-[#E0DDD5] hidden xs:inline">{t('hero.kicker')}</span>
+                  <span className="text-[#E0DDD5] hidden sm:inline">{t('hero.kicker')}</span>
                 </div>
               </div>
 
               {/* Headline */}
               <h1 
-                className="font-serif text-4xl sm:text-5xl lg:text-6xl font-normal tracking-tight leading-[1.12] text-balance"
+                className="font-serif text-3xl sm:text-5xl lg:text-6xl font-normal tracking-tight leading-[1.15] text-balance"
                 style={{ color: 'var(--text-primary)' }}
               >
                 {t('hero.title')}
@@ -104,24 +104,24 @@ export default function HomePage() {
 
               {/* Exact Full Description from Company Profile */}
               <p 
-                className="text-base sm:text-lg leading-relaxed font-light max-w-2xl"
+                className="text-sm sm:text-base lg:text-lg leading-relaxed font-light max-w-2xl"
                 style={{ color: 'var(--text-secondary)' }}
               >
                 {t('hero.desc')}
               </p>
 
               {/* Action CTAs */}
-              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
                 <button
                   onClick={() => openQuoteModal()}
-                  className="btn-glass-morphism shadow-xl cursor-pointer"
+                  className="btn-glass-morphism shadow-xl cursor-pointer min-h-[44px]"
                 >
                   <Sparkles className="w-4 h-4 text-white" />
                   <span>{t('hero.ctaQuote')}</span>
                 </button>
                 <Link
                   href="/products"
-                  className="btn-outline-gold text-center"
+                  className="btn-outline-gold text-center min-h-[44px]"
                 >
                   <span>{t('hero.ctaExplore')}</span>
                   <ArrowRight className="w-4 h-4" />

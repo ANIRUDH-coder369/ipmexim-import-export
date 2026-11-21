@@ -6,10 +6,10 @@ import { X, CheckCircle, Send, ShieldCheck, Sparkles, Building2, Globe2, Mail, P
 import { validateEnquiryForm, EnquiryFormData, ValidationErrors } from '../../utils/validation';
 import { createEnquirySubmission } from '../../utils/enquiry';
 import { getApiUrl } from '../../utils/apiConfig';
-import { PRODUCTS } from '../../data/products';
 import { EnquirySubmission } from '../../types';
-import { useQuoteModal } from '../../context/QuoteContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { closeQuoteModal, submitQuotationThunk, resetQuoteForm } from '@/store/slices/quoteSlice';
 
 export interface DynamicProductLine {
   _id?: string;
@@ -21,7 +21,6 @@ export interface DynamicProductLine {
   isActive?: boolean;
 }
 
-// Initial fallback product lines if backend is loading or offline
 const DEFAULT_PRODUCT_LINES: DynamicProductLine[] = [
   { id: 'pl-1', name: '1121 Steam Basmati Rice (XXL Extra Long Grain)', category: 'Rice & Grains', defaultUnit: '20ft FCL / 25 MT' },
   { id: 'pl-2', name: '1509 Golden Sella Basmati Rice', category: 'Rice & Grains', defaultUnit: 'Metric Tons (MT)' },
@@ -35,7 +34,8 @@ const DEFAULT_PRODUCT_LINES: DynamicProductLine[] = [
 ];
 
 export const QuoteModal: React.FC = () => {
-  const { isOpen, closeQuoteModal, preselectedProduct } = useQuoteModal();
+  const dispatch = useAppDispatch();
+  const { isOpen, preselectedProduct, isSubmitting } = useAppSelector((state) => state.quote);
   const { t } = useLanguage();
 
   const [productLines, setProductLines] = useState<DynamicProductLine[]>(DEFAULT_PRODUCT_LINES);
@@ -53,10 +53,9 @@ export const QuoteModal: React.FC = () => {
   });
 
   const [errors, setErrors] = useState<ValidationErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedEnquiry, setSubmittedEnquiry] = useState<EnquirySubmission | null>(null);
 
-  // Fetch dynamic product lines from server API
+  // Fetch dynamic product lines from backend Express server
   useEffect(() => {
     const fetchDynamicProductLines = async () => {
       try {
@@ -70,7 +69,6 @@ export const QuoteModal: React.FC = () => {
           }
         }
       } catch (err) {
-        // Fallback to localStorage managed by admin
         try {
           const stored = localStorage.getItem('ipm_product_lines');
           if (stored) {
@@ -84,7 +82,9 @@ export const QuoteModal: React.FC = () => {
       }
     };
 
-    fetchDynamicProductLines();
+    if (isOpen) {
+      fetchDynamicProductLines();
+    }
   }, [isOpen]);
 
   useEffect(() => {
@@ -137,9 +137,6 @@ export const QuoteModal: React.FC = () => {
       return;
     }
 
-    setIsSubmitting(true);
-
-    // Prepare local submission record
     const saved = createEnquirySubmission({
       fullName: formData.fullName.trim(),
       businessEmail: formData.businessEmail.trim(),
@@ -153,30 +150,23 @@ export const QuoteModal: React.FC = () => {
       message: formData.message.trim(),
     });
 
-    // Post to backend API so live notifications trigger
+    // Dispatch async thunk via Redux Toolkit to backend server
     try {
-      const apiUrl = getApiUrl();
-      await fetch(`${apiUrl}/enquiries`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: formData.fullName.trim(),
-          corporateEmail: formData.businessEmail.trim(),
-          company: formData.companyName.trim(),
-          destinationCountry: formData.country.trim(),
-          destinationPort: formData.country.trim(),
-          productOfInterest: formData.productName || 'General Export Inquiry',
-          estimatedQuantity: formData.quantity.trim(),
-          phoneWhatsApp: formData.phone?.trim() || undefined,
-          technicalSpecifications: formData.message.trim(),
-          consent: true,
-        }),
-      });
+      await dispatch(submitQuotationThunk({
+        fullName: formData.fullName.trim(),
+        businessEmail: formData.businessEmail.trim(),
+        companyName: formData.companyName.trim(),
+        country: formData.country.trim(),
+        productName: formData.productName || 'Export Sourcing',
+        quantity: formData.quantity.trim(),
+        phone: formData.phone?.trim(),
+        message: formData.message.trim(),
+      })).unwrap();
     } catch (err) {
-      console.warn('Backend notification offline, client state preserved:', err);
+      console.warn('Backend server notification offline or queued:', err);
     }
 
-    // Persist to local storage for Admin dashboard synchronization
+    // Persist to local storage for Admin dashboard fallback
     try {
       const stored = localStorage.getItem('ipm_quotations');
       const list = stored ? JSON.parse(stored) : [];
@@ -186,16 +176,14 @@ export const QuoteModal: React.FC = () => {
       console.error('LocalStorage write failed', e);
     }
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmittedEnquiry(saved);
-    }, 400);
+    setSubmittedEnquiry(saved);
   };
 
   const handleResetAndClose = () => {
     setSubmittedEnquiry(null);
     setErrors({});
-    closeQuoteModal();
+    dispatch(resetQuoteForm());
+    dispatch(closeQuoteModal());
   };
 
   return (
@@ -203,11 +191,11 @@ export const QuoteModal: React.FC = () => {
       role="dialog"
       aria-modal="true"
       aria-labelledby="quote-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
       style={{ backgroundColor: 'var(--modal-overlay)', backdropFilter: 'blur(8px)' }}
     >
       <div 
-        className="relative w-full max-w-2xl my-8 rounded-2xl border shadow-2xl p-6 sm:p-8 transition-all"
+        className="relative w-full max-w-2xl my-2 sm:my-8 max-h-[92vh] overflow-y-auto rounded-2xl border shadow-2xl p-4 sm:p-6 md:p-8 transition-all"
         style={{
           backgroundColor: 'var(--bg-card)',
           borderColor: 'var(--border-card)',
@@ -217,7 +205,7 @@ export const QuoteModal: React.FC = () => {
         {/* Close Button */}
         <button
           onClick={handleResetAndClose}
-          className="absolute top-5 right-5 p-2 rounded-full border transition-colors hover:border-gold-border cursor-pointer"
+          className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 rounded-full border transition-colors hover:border-gold-border cursor-pointer z-10"
           style={{ 
             borderColor: 'var(--border-subtle)',
             color: 'var(--text-muted)'
@@ -230,27 +218,27 @@ export const QuoteModal: React.FC = () => {
         {submittedEnquiry ? (
           <div className="space-y-6 py-4 text-center">
             <div 
-              className="w-16 h-16 mx-auto rounded-full border flex items-center justify-center shadow-lg"
+              className="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-full border flex items-center justify-center shadow-lg"
               style={{
                 backgroundColor: 'var(--gold-muted)',
                 borderColor: 'var(--gold)',
                 color: 'var(--gold)',
               }}
             >
-              <CheckCircle className="w-8 h-8" />
+              <CheckCircle className="w-7 h-7 sm:w-8 sm:h-8" />
             </div>
 
             <div className="space-y-2">
               <h3 className="font-serif text-2xl sm:text-3xl font-medium" style={{ color: 'var(--text-primary)' }}>
                 {t('quoteModal.successTitle')}
               </h3>
-              <p className="text-sm max-w-md mx-auto" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-xs sm:text-sm max-w-md mx-auto" style={{ color: 'var(--text-secondary)' }}>
                 {t('quoteModal.successSub')}
               </p>
             </div>
 
             <div 
-              className="p-5 rounded-xl border max-w-md mx-auto text-left text-xs space-y-2 font-mono shadow-inner"
+              className="p-4 sm:p-5 rounded-xl border max-w-md mx-auto text-left text-xs space-y-2 font-mono shadow-inner"
               style={{
                 backgroundColor: 'var(--bg-card-elevated)',
                 borderColor: 'var(--border-subtle)',
@@ -266,7 +254,7 @@ export const QuoteModal: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span style={{ color: 'var(--text-muted)' }}>Product Line:</span>
-                <span className="truncate max-w-[200px]" style={{ color: 'var(--text-primary)' }}>
+                <span className="truncate max-w-[180px] sm:max-w-[200px]" style={{ color: 'var(--text-primary)' }}>
                   {submittedEnquiry.productName || t('quoteModal.generalProduct')}
                 </span>
               </div>
@@ -276,23 +264,23 @@ export const QuoteModal: React.FC = () => {
               </div>
             </div>
 
-            <p className="text-xs max-w-md mx-auto" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-[11px] sm:text-xs max-w-md mx-auto" style={{ color: 'var(--text-muted)' }}>
               {t('quoteModal.successNotice')}
             </p>
 
             <button
               onClick={handleResetAndClose}
-              className="btn-gold"
+              className="w-full sm:w-auto btn-gold min-h-[44px]"
             >
               {t('quoteModal.closeWindow')}
             </button>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-5 sm:space-y-6">
             
             {/* Modal Brand Header */}
-            <div className="flex items-center gap-3.5 border-b pb-4" style={{ borderColor: 'var(--border-subtle)' }}>
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 border border-white/10 p-1 shrink-0 shadow-sm">
+            <div className="flex items-center gap-3 sm:gap-3.5 border-b pb-4" style={{ borderColor: 'var(--border-subtle)' }}>
+              <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/5 border border-white/10 p-1 shrink-0 shadow-sm">
                 <img
                   src="/logo.png"
                   alt="IPM Exim Official Emblem"
@@ -300,10 +288,10 @@ export const QuoteModal: React.FC = () => {
                 />
               </div>
               <div>
-                <span className="badge-pill mb-1">
+                <span className="badge-pill mb-1 text-[10px] sm:text-xs">
                   {t('quoteModal.kicker')} &bull; Direct Trade Desk
                 </span>
-                <h2 id="quote-modal-title" className="font-serif text-2xl sm:text-3xl font-medium tracking-tight" style={{ color: 'var(--text-primary)' }}>
+                <h2 id="quote-modal-title" className="font-serif text-xl sm:text-2xl md:text-3xl font-medium tracking-tight" style={{ color: 'var(--text-primary)' }}>
                   {t('quoteModal.title')}
                 </h2>
               </div>
@@ -318,7 +306,7 @@ export const QuoteModal: React.FC = () => {
                     Product Line / Sourcing Requirement <span className="text-red-400">*</span>
                   </label>
                   <span className="text-[10px] font-mono" style={{ color: 'var(--text-dim)' }}>
-                    {productLines.length} Active Options
+                    {productLines.length} Options
                   </span>
                 </div>
                 <select
@@ -337,7 +325,7 @@ export const QuoteModal: React.FC = () => {
               </div>
 
               {/* Two Column: Name & Email */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block font-semibold mb-1" style={{ color: 'var(--gold)' }}>
                     {t('quoteModal.nameLabel')} <span className="text-red-400">*</span>
@@ -370,7 +358,7 @@ export const QuoteModal: React.FC = () => {
               </div>
 
               {/* Two Column: Company & Country */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block font-semibold mb-1" style={{ color: 'var(--gold)' }}>
                     {t('quoteModal.companyLabel')} <span className="text-red-400">*</span>
@@ -403,7 +391,7 @@ export const QuoteModal: React.FC = () => {
               </div>
 
               {/* Two Column: Estimated Quantity & Preferred Contact */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block font-semibold mb-1" style={{ color: 'var(--gold)' }}>
                     {t('quoteModal.quantityLabel')} <span className="text-red-400">*</span>
@@ -413,7 +401,7 @@ export const QuoteModal: React.FC = () => {
                     name="quantity"
                     value={formData.quantity}
                     onChange={handleChange}
-                    placeholder="e.g. 1 x 20ft FCL / 10 Metric Tons"
+                    placeholder="e.g. 1 x 20ft FCL / 10 MT"
                     className={`input-luxury ${errors.quantity ? 'border-red-500' : ''}`}
                   />
                   {errors.quantity && <p className="text-red-400 text-[11px] mt-1">{errors.quantity}</p>}
@@ -486,11 +474,11 @@ export const QuoteModal: React.FC = () => {
               </div>
 
               {/* Submit Buttons */}
-              <div className="pt-2 flex items-center justify-end gap-3">
+              <div className="pt-2 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={handleResetAndClose}
-                  className="px-5 py-2.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors hover:text-white cursor-pointer"
+                  className="w-full sm:w-auto px-5 py-3 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors hover:text-white cursor-pointer min-h-[44px] flex items-center justify-center"
                   style={{ color: 'var(--text-muted)' }}
                 >
                   {t('quoteModal.cancel')}
@@ -498,7 +486,7 @@ export const QuoteModal: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="btn-glass-morphism cursor-pointer"
+                  className="w-full sm:w-auto btn-glass-morphism cursor-pointer min-h-[44px]"
                 >
                   {isSubmitting ? (
                     <span>{t('quoteModal.processing')}</span>

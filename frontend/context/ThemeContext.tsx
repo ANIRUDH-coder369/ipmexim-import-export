@@ -1,8 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, ReactNode } from 'react';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { toggleTheme as toggleThemeAction, setTheme as setThemeAction, ThemeMode } from '@/store/slices/themeSlice';
 
-export type Theme = 'dark' | 'light';
+export type Theme = ThemeMode;
 
 interface ThemeContextType {
   theme: Theme;
@@ -13,10 +15,10 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<Theme>('dark');
-  const [mounted, setMounted] = useState(false);
+  const dispatch = useAppDispatch();
+  const theme = useAppSelector((state) => state.theme.theme);
 
-  const applyTheme = (t: Theme) => {
+  const applyThemeToDOM = (t: Theme) => {
     const root = document.documentElement;
     const body = document.body;
     root.classList.remove('dark', 'light');
@@ -30,30 +32,27 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   useEffect(() => {
-    setMounted(true);
     try {
       const savedTheme = localStorage.getItem('theme') as Theme | null;
       if (savedTheme === 'light' || savedTheme === 'dark') {
-        setThemeState(savedTheme);
-        applyTheme(savedTheme);
+        dispatch(setThemeAction(savedTheme));
+        applyThemeToDOM(savedTheme);
       } else {
-        setThemeState('dark');
-        applyTheme('dark');
+        dispatch(setThemeAction('dark'));
+        applyThemeToDOM('dark');
       }
     } catch {
-      setThemeState('dark');
-      applyTheme('dark');
+      dispatch(setThemeAction('dark'));
+      applyThemeToDOM('dark');
     }
-  }, []);
+  }, [dispatch]);
 
   const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
+    dispatch(setThemeAction(newTheme));
     try {
       localStorage.setItem('theme', newTheme);
-    } catch {
-      // ignore storage errors
-    }
-    applyTheme(newTheme);
+    } catch {}
+    applyThemeToDOM(newTheme);
   };
 
   const toggleTheme = () => {

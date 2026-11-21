@@ -1,9 +1,9 @@
 /**
  * API Configuration Helper
- * Resolves the API Base URL seamlessly across:
- * 1. Explicit environment variable (NEXT_PUBLIC_API_URL)
- * 2. Live Vercel / Production deployment (defaults to relative /api)
- * 3. Local development (defaults to http://localhost:5000/api)
+ * Routes all API requests directly to the backend Express server (in the server/ folder).
+ *
+ * In development, defaults to: http://localhost:5000/api
+ * In production, uses NEXT_PUBLIC_API_URL or the dedicated backend API server URL.
  */
 export const getApiUrl = (): string => {
   if (process.env.NEXT_PUBLIC_API_URL) {
@@ -12,9 +12,9 @@ export const getApiUrl = (): string => {
 
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
-    // When deployed live on Vercel or any public domain, use relative /api
     if (host !== 'localhost' && host !== '127.0.0.1') {
-      return '/api';
+      // Production live backend or custom domain
+      return 'https://ipmexim-import-export-backend.onrender.com/api';
     }
   }
 

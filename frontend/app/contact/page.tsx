@@ -10,8 +10,11 @@ import { getApiUrl } from '@/utils/apiConfig';
 import { EnquirySubmission } from '@/types';
 import { useLanguage } from '@/context/LanguageContext';
 import { SocialLinks } from '@/components/common/SocialLinks';
+import { useAppDispatch } from '@/store';
+import { submitQuotationThunk } from '@/store/slices/quoteSlice';
 
 export default function ContactPage() {
+  const dispatch = useAppDispatch();
   const { t } = useLanguage();
   const [formData, setFormData] = useState<EnquiryFormData>({
     fullName: '',
@@ -109,25 +112,18 @@ export default function ContactPage() {
       message: formData.message.trim(),
     });
 
-    // Try sending to backend
+    // Post to backend API via Redux Thunk
     try {
-      const apiUrl = getApiUrl();
-      await fetch(`${apiUrl}/enquiries`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: formData.fullName.trim(),
-          corporateEmail: formData.businessEmail.trim(),
-          company: formData.companyName.trim(),
-          destinationCountry: formData.country.trim(),
-          destinationPort: formData.country.trim(),
-          productOfInterest: formData.productName || 'Direct Contact Inquiry',
-          estimatedQuantity: formData.quantity.trim(),
-          phoneWhatsApp: formData.phone?.trim() || undefined,
-          technicalSpecifications: formData.message.trim(),
-          consent: true,
-        }),
-      });
+      await dispatch(submitQuotationThunk({
+        fullName: formData.fullName.trim(),
+        businessEmail: formData.businessEmail.trim(),
+        companyName: formData.companyName.trim(),
+        country: formData.country.trim(),
+        productName: formData.productName || 'Direct Contact Inquiry',
+        quantity: formData.quantity.trim(),
+        phone: formData.phone?.trim(),
+        message: formData.message.trim(),
+      })).unwrap();
     } catch (err) {
       console.warn('Backend notification offline, client state preserved:', err);
     }
@@ -164,7 +160,7 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 lg:px-12 py-12 lg:py-16 space-y-16">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-8 sm:py-12 lg:py-16 space-y-10 sm:space-y-16">
       {/* Header */}
       <div className="space-y-4 border-b pb-8" style={{ borderColor: 'var(--border-subtle)' }}>
         <span className="badge-pill">{t('contact.kicker')}</span>
@@ -176,11 +172,11 @@ export default function ContactPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
         {/* Left Column: Form */}
         <div className="lg:col-span-7">
           {submittedEnquiry ? (
-            <div className="card-luxury p-8 sm:p-10 space-y-6">
+            <div className="card-luxury p-5 sm:p-8 sm:p-10 space-y-6">
               <div 
                 className="w-16 h-16 rounded-full border flex items-center justify-center shadow-lg"
                 style={{
