@@ -1,10 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
-  "rewrites": [
+  "redirects": [
     {
       "source": "/:path*",
-      "destination": "https://ipmexim-import-export-frontend.vercel.app/:path*"
+      "destination": "https://ipmexim-import-export-frontend.vercel.app/:path*",
+      "permanent": true
     }
   ]
 }

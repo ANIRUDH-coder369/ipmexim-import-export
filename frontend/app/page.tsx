@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   ArrowRight, 
@@ -25,13 +25,33 @@ import { PRODUCTS } from '@/data/products';
 import { COMPANY_INFO, SERVICES, FAQS } from '@/data/company';
 import { useQuoteModal } from '@/context/QuoteContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { fetchFeaturedProductsThunk } from '@/store/slices/productSlice';
+import { getApiUrl } from '@/utils/apiConfig';
 
 export default function HomePage() {
+  const dispatch = useAppDispatch();
   const { openQuoteModal } = useQuoteModal();
   const { t, locale } = useLanguage();
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
-  const featuredProducts = PRODUCTS.slice(0, 4);
+  const dynamicFeatured = useAppSelector((state) => state.product.featuredProducts);
+
+  useEffect(() => {
+    dispatch(fetchFeaturedProductsThunk());
+  }, [dispatch]);
+
+  const resolveProductImage = (url?: string) => {
+    if (!url) return '/images/product_spices_export_1793609366204.jpg';
+    if (url.startsWith('/uploads/')) {
+      const apiUrl = getApiUrl();
+      const origin = apiUrl.replace(/\/api\/?$/, '');
+      return `${origin}${url}`;
+    }
+    return url;
+  };
+
+  const featuredProducts = dynamicFeatured && dynamicFeatured.length > 0 ? dynamicFeatured : PRODUCTS.slice(0, 4);
 
   const getServiceIcon = (index: number) => {
     switch (index) {
@@ -354,14 +374,14 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {featuredProducts.map((product) => (
             <div
-              key={product.id}
+              key={(product as any)._id || product.id || product.slug}
               className="card-luxury flex flex-col justify-between overflow-hidden group"
             >
               <div>
                 {/* Image */}
                 <div className="relative aspect-[4/3] overflow-hidden bg-black/10">
                   <img
-                    src={product.imageUrls[0]}
+                    src={resolveProductImage(product.imageUrls?.[0])}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />

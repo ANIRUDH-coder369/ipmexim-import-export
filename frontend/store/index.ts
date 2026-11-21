@@ -4,6 +4,7 @@ import quoteReducer from './slices/quoteSlice';
 import themeReducer from './slices/themeSlice';
 import languageReducer from './slices/languageSlice';
 import adminReducer from './slices/adminSlice';
+import productReducer from './slices/productSlice';
 
 export const store = configureStore({
   reducer: {
@@ -11,6 +12,7 @@ export const store = configureStore({
     theme: themeReducer,
     language: languageReducer,
     admin: adminReducer,
+    product: productReducer,
   },
   devTools: process.env.NODE_ENV !== 'production',
 });

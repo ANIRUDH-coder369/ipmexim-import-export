@@ -21,13 +21,13 @@ export function filterProducts(
   if (searchQuery.trim()) {
     const q = searchQuery.toLowerCase().trim();
     filtered = filtered.filter((p) => {
-      const matchName = p.name.toLowerCase().includes(q);
-      const matchCategory = p.categoryName.toLowerCase().includes(q);
-      const matchDesc = p.shortDescription.toLowerCase().includes(q) || p.fullDescription.toLowerCase().includes(q);
-      const matchOrigin = p.origin.toLowerCase().includes(q);
-      const matchHs = p.hsCode.toLowerCase().includes(q);
-      const matchSpecs = Object.entries(p.specifications).some(
-        ([key, val]) => key.toLowerCase().includes(q) || val.toLowerCase().includes(q)
+      const matchName = (p.name || '').toLowerCase().includes(q);
+      const matchCategory = (p.categoryName || '').toLowerCase().includes(q);
+      const matchDesc = (p.shortDescription || '').toLowerCase().includes(q) || (p.fullDescription || '').toLowerCase().includes(q);
+      const matchOrigin = (p.origin || '').toLowerCase().includes(q);
+      const matchHs = (p.hsCode || '').toLowerCase().includes(q);
+      const matchSpecs = Object.entries(p.specifications || {}).some(
+        ([key, val]) => key.toLowerCase().includes(q) || String(val).toLowerCase().includes(q)
       );
       return matchName || matchCategory || matchDesc || matchOrigin || matchHs || matchSpecs;
     });

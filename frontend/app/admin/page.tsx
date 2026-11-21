@@ -30,9 +30,15 @@ import {
   Pencil,
   Sliders,
   Check,
-  Sparkles
+  Sparkles,
+  Star,
+  Upload,
+  Image as ImageIcon,
+  Package,
 } from 'lucide-react';
 import { getApiUrl } from '@/utils/apiConfig';
+import { ProductItem } from '@/store/slices/productSlice';
+import { PRODUCTS } from '@/data/products';
 
 interface QuotationEntry {
   _id?: string;
@@ -218,8 +224,8 @@ export default function AdminDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
   
-  // Navigation Tabs: 'quotations' | 'productLines'
-  const [activeAdminTab, setActiveAdminTab] = useState<'quotations' | 'productLines'>('quotations');
+  // Navigation Tabs: 'quotations' | 'products' | 'productLines'
+  const [activeAdminTab, setActiveAdminTab] = useState<'quotations' | 'products' | 'productLines'>('quotations');
 
   // Quotation Management State
   const [quotations, setQuotations] = useState<QuotationEntry[]>([]);
@@ -236,6 +242,32 @@ export default function AdminDashboardPage() {
   const [emailStatusUpdate, setEmailStatusUpdate] = useState<'Contacted' | 'Quoted' | 'Reviewed'>('Contacted');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailSuccessNotice, setEmailSuccessNotice] = useState<string | null>(null);
+
+  // Featured Export Products State
+  const [productsList, setProductsList] = useState<ProductItem[]>([]);
+  const [prodSearchQuery, setProdSearchQuery] = useState('');
+  const [prodCategoryFilter, setProdCategoryFilter] = useState('ALL');
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
+  const [productImageFile, setProductImageFile] = useState<File | null>(null);
+  const [productImagePreview, setProductImagePreview] = useState<string | null>(null);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [productNotice, setProductNotice] = useState<string | null>(null);
+  const [productError, setProductError] = useState<string | null>(null);
+  const [productFormData, setProductFormData] = useState({
+    name: '',
+    slug: '',
+    categoryName: 'Spices & Food Products',
+    categoryId: 'spices-food',
+    shortDescription: '',
+    fullDescription: '',
+    origin: 'India',
+    hsCode: '0908.31.00',
+    minimumOrderQuantity: '1 x 20ft FCL',
+    status: 'Available',
+    featured: true,
+    imageUrl: '',
+  });
 
   // Dynamic Product Lines Management State
   const [productLines, setProductLines] = useState<ProductLineItem[]>([]);
@@ -286,6 +318,7 @@ export default function AdminDashboardPage() {
           setIsAuthenticated(true);
           setIsCheckingAuth(false);
           fetchQuotations(token);
+          fetchProductsAdmin(token);
           fetchProductLinesAdmin(token);
           return;
         } else if (res.status === 401 || res.status === 403) {
@@ -310,6 +343,7 @@ export default function AdminDashboardPage() {
       setIsAuthenticated(true);
       setIsCheckingAuth(false);
       fetchQuotations(token);
+      fetchProductsAdmin(token);
       fetchProductLinesAdmin(token);
     };
 
@@ -403,6 +437,215 @@ export default function AdminDashboardPage() {
 
     setProductLines(INITIAL_SAMPLE_PRODUCT_LINES);
     localStorage.setItem('ipm_product_lines', JSON.stringify(INITIAL_SAMPLE_PRODUCT_LINES));
+  };
+
+  const resolveProductImage = (url?: string) => {
+    if (!url) return '/images/product_spices_export_1793609366204.jpg';
+    if (url.startsWith('/uploads/')) {
+      const apiUrl = getApiUrl();
+      const origin = apiUrl.replace(/\/api\/?$/, '');
+      return `${origin}${url}`;
+    }
+    return url;
+  };
+
+  const fetchProductsAdmin = async (token?: string | null) => {
+    try {
+      const apiUrl = getApiUrl();
+      const res = await fetch(`${apiUrl}/products`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.products && data.products.length > 0) {
+          setProductsList(data.products);
+          localStorage.setItem('ipm_admin_products', JSON.stringify(data.products));
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Backend products offline, using local store:', err);
+    }
+
+    try {
+      const stored = localStorage.getItem('ipm_admin_products');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setProductsList(parsed);
+          return;
+        }
+      }
+    } catch (e) {}
+
+    // Fallback to initial PRODUCTS catalog
+    setProductsList(PRODUCTS as any);
+  };
+
+  // ========================================================
+  // FEATURED PRODUCTS CRUD HANDLERS
+  // ========================================================
+
+  const handleOpenAddProduct = () => {
+    setEditingProduct(null);
+    setProductFormData({
+      name: '',
+      slug: '',
+      categoryName: 'Spices & Food Products',
+      categoryId: 'spices-food',
+      shortDescription: '',
+      fullDescription: '',
+      origin: 'India',
+      hsCode: '0908.31.00',
+      minimumOrderQuantity: '1 x 20ft FCL / As per contract',
+      status: 'Available',
+      featured: true,
+      imageUrl: '',
+    });
+    setProductImageFile(null);
+    setProductImagePreview(null);
+    setProductError(null);
+    setIsProductModalOpen(true);
+  };
+
+  const handleOpenEditProduct = (prod: ProductItem) => {
+    setEditingProduct(prod);
+    setProductFormData({
+      name: prod.name || '',
+      slug: prod.slug || '',
+      categoryName: prod.categoryName || 'Spices & Food Products',
+      categoryId: prod.categoryId || 'spices-food',
+      shortDescription: prod.shortDescription || '',
+      fullDescription: prod.fullDescription || '',
+      origin: prod.origin || 'India',
+      hsCode: prod.hsCode || '0908.31.00',
+      minimumOrderQuantity: prod.minimumOrderQuantity || '1 x 20ft FCL',
+      status: prod.status || 'Available',
+      featured: prod.featured !== false,
+      imageUrl: prod.imageUrls?.[0] || '',
+    });
+    setProductImageFile(null);
+    setProductImagePreview(resolveProductImage(prod.imageUrls?.[0]));
+    setProductError(null);
+    setIsProductModalOpen(true);
+  };
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setProductImageFile(file);
+      setProductImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!productFormData.name.trim()) {
+      setProductError('Product name is required.');
+      return;
+    }
+
+    setIsSavingProduct(true);
+    setProductError(null);
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      const apiUrl = getApiUrl();
+      const formData = new FormData();
+      formData.append('name', productFormData.name.trim());
+      formData.append('slug', productFormData.slug.trim());
+      formData.append('categoryName', productFormData.categoryName);
+      formData.append('categoryId', productFormData.categoryId);
+      formData.append('shortDescription', productFormData.shortDescription.trim());
+      formData.append('fullDescription', productFormData.fullDescription.trim());
+      formData.append('origin', productFormData.origin.trim());
+      formData.append('hsCode', productFormData.hsCode.trim());
+      formData.append('minimumOrderQuantity', productFormData.minimumOrderQuantity.trim());
+      formData.append('status', productFormData.status);
+      formData.append('featured', String(productFormData.featured));
+
+      if (productImageFile) {
+        formData.append('image', productImageFile);
+      } else if (productFormData.imageUrl) {
+        formData.append('imageUrl', productFormData.imageUrl.trim());
+      }
+
+      const targetId = editingProduct ? (editingProduct._id || editingProduct.id) : '';
+      const url = editingProduct ? `${apiUrl}/products/${targetId}` : `${apiUrl}/products`;
+      const method = editingProduct ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const savedProd = data.product;
+        if (editingProduct) {
+          setProductsList(prev => prev.map(p => (p._id === targetId || p.id === targetId) ? savedProd : p));
+          setProductNotice(`Product "${savedProd.name}" updated successfully!`);
+        } else {
+          setProductsList(prev => [savedProd, ...prev]);
+          setProductNotice(`Product "${savedProd.name}" published to export catalogue!`);
+        }
+        setIsProductModalOpen(false);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setProductError(errData.message || 'Failed to save product to backend.');
+      }
+    } catch (err: any) {
+      setProductError(err.message || 'Failed to save product.');
+    } finally {
+      setIsSavingProduct(false);
+      setTimeout(() => setProductNotice(null), 3000);
+    }
+  };
+
+  const handleToggleFeatured = async (product: ProductItem) => {
+    const targetId = product._id || product.id;
+    const newFeaturedState = !product.featured;
+
+    setProductsList(prev => prev.map(p => {
+      if (p._id === targetId || p.id === targetId) {
+        return { ...p, featured: newFeaturedState };
+      }
+      return p;
+    }));
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      const apiUrl = getApiUrl();
+      await fetch(`${apiUrl}/products/${targetId}/toggle-featured`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (err) {
+      console.warn('Backend toggle offline, client state kept:', err);
+    }
+  };
+
+  const handleDeleteProduct = async (product: ProductItem) => {
+    const targetId = product._id || product.id;
+    if (!window.confirm(`Are you sure you want to delete "${product.name}" from the export catalog?`)) {
+      return;
+    }
+
+    setProductsList(prev => prev.filter(p => p._id !== targetId && p.id !== targetId));
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      const apiUrl = getApiUrl();
+      await fetch(`${apiUrl}/products/${targetId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProductNotice(`Product "${product.name}" deleted.`);
+      setTimeout(() => setProductNotice(null), 3000);
+    } catch (err) {
+      console.warn('Backend delete offline:', err);
+    }
   };
 
   const handleLogout = () => {
@@ -619,6 +862,32 @@ export default function AdminDashboardPage() {
       (p.description && p.description.toLowerCase().includes(q))
     );
   }, [productLines, plSearchQuery]);
+
+  // Filter Products
+  const filteredProducts = useMemo(() => {
+    return productsList.filter(p => {
+      const q = prodSearchQuery.toLowerCase();
+      const matchesSearch = !q ||
+        (p.name && p.name.toLowerCase().includes(q)) ||
+        (p.hsCode && p.hsCode.toLowerCase().includes(q)) ||
+        (p.origin && p.origin.toLowerCase().includes(q)) ||
+        (p.categoryName && p.categoryName.toLowerCase().includes(q));
+
+      const matchesCat = prodCategoryFilter === 'ALL' ||
+        (prodCategoryFilter === 'FEATURED' && p.featured) ||
+        p.categoryId === prodCategoryFilter ||
+        p.categoryName === prodCategoryFilter;
+
+      return matchesSearch && matchesCat;
+    });
+  }, [productsList, prodSearchQuery, prodCategoryFilter]);
+
+  const productStats = useMemo(() => {
+    const total = productsList.length;
+    const featured = productsList.filter(p => p.featured).length;
+    const active = productsList.filter(p => p.status === 'Available' || p.status === 'In Season').length;
+    return { total, featured, active };
+  }, [productsList]);
 
   // Dashboard Stats
   const quotationStats = useMemo(() => {
@@ -886,6 +1155,19 @@ export default function AdminDashboardPage() {
             </button>
 
             <button
+              onClick={() => setActiveAdminTab('products')}
+              className={`flex items-center justify-center gap-2.5 sm:gap-3 px-4 sm:px-6 py-3 sm:py-3.5 rounded-xl border text-xs sm:text-base font-bold tracking-wide transition-all cursor-pointer min-h-[44px] ${
+                activeAdminTab === 'products'
+                  ? 'btn-glass-morphism shadow-xl'
+                  : 'hover:border-gold-border/40'
+              }`}
+              style={activeAdminTab !== 'products' ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)', color: 'var(--text-secondary)' } : {}}
+            >
+              <Package className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              <span>Featured Export Products ({productsList.length})</span>
+            </button>
+
+            <button
               onClick={() => setActiveAdminTab('productLines')}
               className={`flex items-center justify-center gap-2.5 sm:gap-3 px-4 sm:px-6 py-3 sm:py-3.5 rounded-xl border text-xs sm:text-base font-bold tracking-wide transition-all cursor-pointer min-h-[44px] ${
                 activeAdminTab === 'productLines'
@@ -902,6 +1184,7 @@ export default function AdminDashboardPage() {
           <button
             onClick={() => {
               if (activeAdminTab === 'quotations') fetchQuotations();
+              else if (activeAdminTab === 'products') fetchProductsAdmin();
               else fetchProductLinesAdmin();
             }}
             disabled={isLoading}
@@ -1126,7 +1409,193 @@ export default function AdminDashboardPage() {
         )}
 
         {/* ========================================================
-            VIEW 2: DYNAMIC PRODUCT LINES / REQUIREMENTS MANAGER
+            VIEW 2: FEATURED EXPORT PRODUCTS CATALOGUE & IMAGE UPLOADS
+            ======================================================== */}
+        {activeAdminTab === 'products' && (
+          <div className="space-y-10 animate-fade-in">
+            {/* Header & Add Button */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div>
+                <span className="badge-pill mb-2 px-3 py-1 text-xs font-bold tracking-wider">Live Export Products & Homepage Showcase</span>
+                <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+                  Featured Export Products
+                </h1>
+                <p className="text-sm sm:text-base mt-2 font-medium" style={{ color: 'var(--text-muted)' }}>
+                  Full CRUD & File Upload: Add new export products, upload high-resolution images, update specifications, and toggle homepage featured status.
+                </p>
+              </div>
+
+              <button
+                onClick={handleOpenAddProduct}
+                className="btn-glass-morphism px-6 py-3.5 text-sm sm:text-base font-bold tracking-wide cursor-pointer inline-flex items-center gap-2.5 shrink-0 shadow-xl min-h-[44px]"
+              >
+                <Plus className="w-5 h-5 text-white" />
+                <span>Add Export Product</span>
+              </button>
+            </div>
+
+            {/* Success Notice Banner */}
+            {productNotice && (
+              <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm flex items-center gap-3">
+                <Check className="w-5 h-5 shrink-0 text-emerald-400" />
+                <span>{productNotice}</span>
+              </div>
+            )}
+
+            {/* Metric KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="card-luxury p-6 rounded-2xl border space-y-2">
+                <span className="text-xs uppercase font-bold tracking-wider" style={{ color: 'var(--gold)' }}>Total Products</span>
+                <p className="text-3xl font-bold font-serif">{productStats.total}</p>
+                <p className="text-xs text-muted-grey">Export items registered in database</p>
+              </div>
+              <div className="card-luxury p-6 rounded-2xl border space-y-2">
+                <span className="text-xs uppercase font-bold tracking-wider" style={{ color: 'var(--gold)' }}>Featured on Homepage</span>
+                <p className="text-3xl font-bold font-serif text-[#D4AF69]">{productStats.featured}</p>
+                <p className="text-xs text-muted-grey">Displayed in primary customer showcase</p>
+              </div>
+              <div className="card-luxury p-6 rounded-2xl border space-y-2">
+                <span className="text-xs uppercase font-bold tracking-wider" style={{ color: 'var(--gold)' }}>Active In Stock</span>
+                <p className="text-3xl font-bold font-serif text-emerald-400">{productStats.active}</p>
+                <p className="text-xs text-muted-grey">Available for commercial container export</p>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 rounded-2xl border"
+              style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
+            >
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-grey" />
+                <input
+                  type="text"
+                  placeholder="Search products by name, origin, HS code, or category..."
+                  value={prodSearchQuery}
+                  onChange={(e) => setProdSearchQuery(e.target.value)}
+                  className="input-luxury pl-10 text-xs sm:text-sm"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <select
+                  value={prodCategoryFilter}
+                  onChange={(e) => setProdCategoryFilter(e.target.value)}
+                  className="input-luxury text-xs sm:text-sm py-2 px-3"
+                >
+                  <option value="ALL">All Categories</option>
+                  <option value="FEATURED">⭐ Featured Only</option>
+                  <option value="Spices & Food Products">Spices & Food Products</option>
+                  <option value="Grains & Agricultural Staples">Grains & Agricultural Staples</option>
+                  <option value="Textiles & Fine Fabrics">Textiles & Fine Fabrics</option>
+                  <option value="Metal & Artisanal Copperware">Metal & Artisanal Copperware</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Products Table */}
+            <div className="rounded-2xl border overflow-hidden shadow-2xl"
+              style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
+            >
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-sm min-w-[850px]">
+                  <thead>
+                    <tr className="border-b" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-topbar)' }}>
+                      <th className="py-4 px-6 font-bold uppercase tracking-wider text-xs" style={{ color: 'var(--gold)' }}>Product</th>
+                      <th className="py-4 px-6 font-bold uppercase tracking-wider text-xs" style={{ color: 'var(--gold)' }}>Category</th>
+                      <th className="py-4 px-6 font-bold uppercase tracking-wider text-xs" style={{ color: 'var(--gold)' }}>Origin & HS Code</th>
+                      <th className="py-4 px-6 font-bold uppercase tracking-wider text-xs" style={{ color: 'var(--gold)' }}>Status</th>
+                      <th className="py-4 px-6 font-bold uppercase tracking-wider text-xs text-center" style={{ color: 'var(--gold)' }}>Homepage Featured</th>
+                      <th className="py-4 px-6 font-bold uppercase tracking-wider text-xs text-right" style={{ color: 'var(--gold)' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y" style={{ borderColor: 'var(--border-subtle)' }}>
+                    {filteredProducts.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-muted-grey">
+                          No export products match the current filters. Click &quot;Add Export Product&quot; to create one.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredProducts.map((prod) => {
+                        const targetId = prod._id || prod.id;
+                        const thumb = resolveProductImage(prod.imageUrls?.[0]);
+                        return (
+                          <tr key={targetId} className="hover:bg-white/[0.02] transition-colors">
+                            <td className="py-4 px-6">
+                              <div className="flex items-center gap-3.5">
+                                <div className="w-12 h-12 rounded-xl overflow-hidden bg-black/20 border shrink-0" style={{ borderColor: 'var(--border-subtle)' }}>
+                                  <img src={thumb} alt={prod.name} className="w-full h-full object-cover" />
+                                </div>
+                                <div>
+                                  <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>{prod.name}</div>
+                                  <div className="text-xs text-muted-grey font-mono">/products/{prod.slug}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-4 px-6">
+                              <span className="badge-pill text-[11px]">{prod.categoryName}</span>
+                            </td>
+                            <td className="py-4 px-6 text-xs">
+                              <div>{prod.origin}</div>
+                              <span className="font-mono text-[#D4AF69]">{prod.hsCode}</span>
+                            </td>
+                            <td className="py-4 px-6">
+                              <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                                prod.status === 'Available' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                                prod.status === 'In Season' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                                'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                              }`}>
+                                {prod.status}
+                              </span>
+                            </td>
+                            <td className="py-4 px-6 text-center">
+                              <button
+                                onClick={() => handleToggleFeatured(prod)}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                                  prod.featured
+                                    ? 'bg-[#D4AF69]/20 text-[#D4AF69] border-[#D4AF69]/50 shadow-sm'
+                                    : 'hover:border-gold-border/50 text-muted-grey'
+                                }`}
+                                style={!prod.featured ? { backgroundColor: 'var(--bg-topbar)', borderColor: 'var(--border-subtle)' } : {}}
+                                title="Click to toggle homepage featured status"
+                              >
+                                <Star className={`w-3.5 h-3.5 ${prod.featured ? 'fill-[#D4AF69]' : ''}`} />
+                                <span>{prod.featured ? 'Featured on Home' : 'Standard'}</span>
+                              </button>
+                            </td>
+                            <td className="py-4 px-6 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => handleOpenEditProduct(prod)}
+                                  className="p-2.5 rounded-xl border hover:border-gold-border cursor-pointer transition-colors"
+                                  style={{ backgroundColor: 'var(--bg-topbar)', borderColor: 'var(--border-subtle)', color: 'var(--text-primary)' }}
+                                  title="Edit Product Details & Image"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteProduct(prod)}
+                                  className="p-2.5 rounded-xl border hover:border-red-500/50 hover:text-red-400 cursor-pointer transition-colors text-red-400/80"
+                                  style={{ backgroundColor: 'var(--bg-topbar)', borderColor: 'var(--border-subtle)' }}
+                                  title="Delete Product"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            VIEW 3: DYNAMIC PRODUCT LINES / REQUIREMENTS MANAGER
             ======================================================== */}
         {activeAdminTab === 'productLines' && (
           <div className="space-y-10 animate-fade-in">
@@ -1634,6 +2103,289 @@ export default function AdminDashboardPage() {
                     <>
                       <span>Transmit Email to Customer</span>
                       <Send className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* ========================================================
+          MODAL: ADD / EDIT FEATURED EXPORT PRODUCT (WITH FILE UPLOAD)
+          ======================================================== */}
+      {isProductModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+          style={{ backgroundColor: 'var(--modal-overlay)', backdropFilter: 'blur(8px)' }}
+        >
+          <div
+            className="relative w-full max-w-2xl my-4 sm:my-8 max-h-[92vh] overflow-y-auto rounded-2xl border shadow-2xl p-4 sm:p-6 sm:p-8 space-y-6"
+            style={{
+              backgroundColor: 'var(--bg-card)',
+              borderColor: 'var(--border-card)',
+              color: 'var(--text-primary)',
+            }}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--border-subtle)' }}>
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl border" style={{ backgroundColor: 'var(--gold-muted)', borderColor: 'var(--gold-border)' }}>
+                  <Package className="w-5 h-5" style={{ color: 'var(--gold)' }} />
+                </div>
+                <div>
+                  <h3 className="font-serif text-xl sm:text-2xl font-normal" style={{ color: 'var(--text-primary)' }}>
+                    {editingProduct ? 'Edit Export Product' : 'Add New Export Product'}
+                  </h3>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {editingProduct ? 'Modify specifications, status, and upload new product imagery' : 'Create a new export product with image upload and publish live'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsProductModalOpen(false)}
+                className="p-2 rounded-full border hover:border-gold-border cursor-pointer"
+                style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Error Message */}
+            {productError && (
+              <div className="p-3.5 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 text-xs flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{productError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProduct} className="space-y-4 text-xs sm:text-sm">
+              {/* Product Name */}
+              <div>
+                <label className="block font-bold mb-1" style={{ color: 'var(--gold)' }}>
+                  Product Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Salem Turmeric Fingers (High Curcumin 3.5%+)"
+                  value={productFormData.name}
+                  onChange={(e) => setProductFormData({ ...productFormData, name: e.target.value })}
+                  className="input-luxury"
+                />
+              </div>
+
+              {/* Two Column: Category & Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold mb-1" style={{ color: 'var(--gold)' }}>
+                    Export Category <span className="text-red-400">*</span>
+                  </label>
+                  <select
+                    value={productFormData.categoryName}
+                    onChange={(e) => {
+                      const catName = e.target.value;
+                      const catId = catName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                      setProductFormData({ ...productFormData, categoryName: catName, categoryId: catId });
+                    }}
+                    className="input-luxury"
+                  >
+                    <option value="Spices & Food Products">Spices & Food Products</option>
+                    <option value="Grains & Agricultural Staples">Grains & Agricultural Staples</option>
+                    <option value="Textiles & Fine Fabrics">Textiles & Fine Fabrics</option>
+                    <option value="Metal & Artisanal Copperware">Metal & Artisanal Copperware</option>
+                    <option value="Ceramic & Natural Stone">Ceramic & Natural Stone</option>
+                    <option value="Eco-Friendly Packaging Materials">Eco-Friendly Packaging Materials</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1" style={{ color: 'var(--gold)' }}>
+                    Export Status
+                  </label>
+                  <select
+                    value={productFormData.status}
+                    onChange={(e) => setProductFormData({ ...productFormData, status: e.target.value })}
+                    className="input-luxury"
+                  >
+                    <option value="Available">Available</option>
+                    <option value="In Season">In Season</option>
+                    <option value="Custom Order">Custom Order</option>
+                    <option value="Out of Stock">Out of Stock</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Two Column: Origin & HS Code */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold mb-1" style={{ color: 'var(--gold)' }}>
+                    Origin (State/Region, India)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Kerala & Tamil Nadu, India"
+                    value={productFormData.origin}
+                    onChange={(e) => setProductFormData({ ...productFormData, origin: e.target.value })}
+                    className="input-luxury"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1" style={{ color: 'var(--gold)' }}>
+                    HS Tariff Code
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 0908.31.00"
+                    value={productFormData.hsCode}
+                    onChange={(e) => setProductFormData({ ...productFormData, hsCode: e.target.value })}
+                    className="input-luxury font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Minimum Order Quantity */}
+              <div>
+                <label className="block font-bold mb-1" style={{ color: 'var(--gold)' }}>
+                  Minimum Order Quantity (MOQ)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 1 x 20ft FCL / 10 Metric Tons"
+                  value={productFormData.minimumOrderQuantity}
+                  onChange={(e) => setProductFormData({ ...productFormData, minimumOrderQuantity: e.target.value })}
+                  className="input-luxury"
+                />
+              </div>
+
+              {/* Short Description */}
+              <div>
+                <label className="block font-bold mb-1" style={{ color: 'var(--gold)' }}>
+                  Short Description <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  rows={2}
+                  required
+                  placeholder="Brief summary of grade, aroma, purity, and processing..."
+                  value={productFormData.shortDescription}
+                  onChange={(e) => setProductFormData({ ...productFormData, shortDescription: e.target.value })}
+                  className="input-luxury"
+                />
+              </div>
+
+              {/* Full Technical Specifications */}
+              <div>
+                <label className="block font-bold mb-1" style={{ color: 'var(--gold)' }}>
+                  Full Description & Export Parameters
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Comprehensive commercial specifications, packing terms, and harvesting details..."
+                  value={productFormData.fullDescription}
+                  onChange={(e) => setProductFormData({ ...productFormData, fullDescription: e.target.value })}
+                  className="input-luxury"
+                />
+              </div>
+
+              {/* Featured On Homepage Toggle */}
+              <div className="flex items-center gap-3 p-3.5 rounded-xl border"
+                style={{ backgroundColor: 'var(--bg-card-elevated)', borderColor: 'var(--border-subtle)' }}
+              >
+                <input
+                  type="checkbox"
+                  id="featuredCheckbox"
+                  checked={productFormData.featured}
+                  onChange={(e) => setProductFormData({ ...productFormData, featured: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-600 text-[#D4AF69] focus:ring-[#D4AF69] cursor-pointer"
+                />
+                <label htmlFor="featuredCheckbox" className="font-semibold cursor-pointer select-none" style={{ color: 'var(--text-primary)' }}>
+                  ⭐ Showcase in &quot;Featured Export Products&quot; section on the homepage
+                </label>
+              </div>
+
+              {/* File Upload Section */}
+              <div>
+                <label className="block font-bold mb-1.5" style={{ color: 'var(--gold)' }}>
+                  Product Photo / Image Upload
+                </label>
+                <div
+                  className="border-2 border-dashed rounded-2xl p-4 sm:p-6 text-center cursor-pointer transition-colors hover:border-[#D4AF69]/60"
+                  style={{ backgroundColor: 'var(--bg-topbar)', borderColor: 'var(--border-input)' }}
+                  onClick={() => document.getElementById('productImageInput')?.click()}
+                >
+                  <input
+                    type="file"
+                    id="productImageInput"
+                    accept="image/*"
+                    onChange={handleImageFileChange}
+                    className="hidden"
+                  />
+
+                  {productImagePreview ? (
+                    <div className="space-y-3">
+                      <div className="w-28 h-28 mx-auto rounded-xl overflow-hidden border shadow-lg" style={{ borderColor: 'var(--gold-border)' }}>
+                        <img src={productImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="text-xs text-emerald-400 font-semibold flex items-center justify-center gap-1.5">
+                        <Check className="w-4 h-4" />
+                        <span>{productImageFile ? `Ready to upload: ${productImageFile.name}` : 'Current Image Preview'}</span>
+                      </div>
+                      <p className="text-[11px] text-muted-grey">Click to select a different image file</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 py-2">
+                      <div className="w-12 h-12 mx-auto rounded-full border flex items-center justify-center" style={{ backgroundColor: 'var(--gold-muted)', borderColor: 'var(--gold-border)' }}>
+                        <Upload className="w-5 h-5" style={{ color: 'var(--gold)' }} />
+                      </div>
+                      <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                        Click to browse or drag & drop product photo
+                      </p>
+                      <p className="text-[11px] text-muted-grey">
+                        PNG, JPG, WebP, or SVG up to 10 MB
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Optional Image URL fallback */}
+                <div className="mt-2">
+                  <span className="text-[11px] text-muted-grey">Or paste existing image path/URL:</span>
+                  <input
+                    type="text"
+                    placeholder="/images/product_spices_export_1793609366204.jpg"
+                    value={productFormData.imageUrl}
+                    onChange={(e) => {
+                      setProductFormData({ ...productFormData, imageUrl: e.target.value });
+                      if (!productImageFile && e.target.value) {
+                        setProductImagePreview(e.target.value);
+                      }
+                    }}
+                    className="input-luxury text-xs mt-1"
+                  />
+                </div>
+              </div>
+
+              {/* Submit / Cancel Buttons */}
+              <div className="pt-4 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsProductModalOpen(false)}
+                  className="px-5 py-3 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-grey hover:text-white transition-colors min-h-[44px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingProduct}
+                  className="btn-glass-morphism px-7 py-3.5 text-xs sm:text-sm font-bold tracking-wide cursor-pointer inline-flex items-center justify-center gap-2.5 shadow-xl min-h-[44px]"
+                >
+                  {isSavingProduct ? (
+                    <span>Uploading & Saving...</span>
+                  ) : (
+                    <>
+                      <span>{editingProduct ? 'Save Product Changes' : 'Publish Product to Catalogue'}</span>
+                      <Check className="w-4 h-4" />
                     </>
                   )}
                 </button>

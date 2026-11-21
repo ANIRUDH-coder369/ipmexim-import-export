@@ -1,27 +1,49 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Search, AlertCircle, Sparkles, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import { PRODUCTS, PRODUCT_CATEGORIES } from '@/data/products';
 import { filterProducts } from '@/utils/catalogFilter';
 import { useQuoteModal } from '@/context/QuoteContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { fetchProductsThunk } from '@/store/slices/productSlice';
+import { getApiUrl } from '@/utils/apiConfig';
 
 export default function ProductsPage() {
+  const dispatch = useAppDispatch();
   const { openQuoteModal } = useQuoteModal();
   const { t, locale } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'featured' | 'name-asc' | 'name-desc'>('featured');
 
+  const reduxProducts = useAppSelector((state) => state.product.products);
+
+  useEffect(() => {
+    dispatch(fetchProductsThunk());
+  }, [dispatch]);
+
+  const resolveProductImage = (url?: string) => {
+    if (!url) return '/images/product_spices_export_1793609366204.jpg';
+    if (url.startsWith('/uploads/')) {
+      const apiUrl = getApiUrl();
+      const origin = apiUrl.replace(/\/api\/?$/, '');
+      return `${origin}${url}`;
+    }
+    return url;
+  };
+
+  const allProducts = reduxProducts && reduxProducts.length > 0 ? reduxProducts : PRODUCTS;
+
   const filteredProducts = useMemo(() => {
-    return filterProducts(PRODUCTS, {
+    return filterProducts(allProducts as any, {
       categoryId: selectedCategory,
       searchQuery,
       sortBy,
     });
-  }, [selectedCategory, searchQuery, sortBy]);
+  }, [allProducts, selectedCategory, searchQuery, sortBy]);
 
   const handleReset = () => {
     setSearchQuery('');
@@ -147,14 +169,14 @@ export default function ProductsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredProducts.map((product) => (
             <div
-              key={product.id}
+              key={product._id || product.id}
               className="card-luxury flex flex-col justify-between overflow-hidden group"
             >
               <div>
                 {/* Product Photo */}
                 <div className="relative aspect-[4/3] bg-black/10 overflow-hidden">
                   <img
-                    src={product.imageUrls[0]}
+                    src={resolveProductImage(product.imageUrls?.[0])}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
