@@ -23,7 +23,7 @@ import { getApiUrl } from '@/utils/apiConfig';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 
-export interface ShipmentItem {
+interface ShipmentItem {
   _id?: string;
   id?: string;
   title: string;
@@ -37,7 +37,7 @@ export interface ShipmentItem {
 }
 
 // Helper to extract YouTube embed URL from various YouTube formats
-export const getYouTubeEmbedUrl = (url: string): string | null => {
+const getYouTubeEmbedUrl = (url: string): string | null => {
   if (!url) return null;
   try {
     const trimmed = url.trim();
