@@ -42,7 +42,7 @@ In the Vercel project configuration screen, go to **Environment Variables** and 
 | `SMTP_USER` | `ipmexim@gmail.com` | Official Gmail dispatch user |
 | `SMTP_PASS` | `ephajflwefjnokyu` | Gmail App Password |
 | `EMAIL_FROM` | `"IPM Exim" <ipmexim@gmail.com>` | Official sender header |
-| `NEXT_PUBLIC_API_URL` | *(Optional)* | Leave blank to use built-in serverless `/api` routes! Or set to external Express URL if hosted separately. |
+| `NEXT_PUBLIC_API_URL` | `https://ipmexim-import-export.vercel.app/api` | Dedicated live backend Express API server on Vercel |
 
 ---
 
