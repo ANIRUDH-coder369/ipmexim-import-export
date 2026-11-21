@@ -74,11 +74,18 @@ const sendNewQuotationNotification = async (quotation, attachmentPath) => {
   }
 
   // Attach any user uploaded specification file
-  if (attachmentPath && fs.existsSync(attachmentPath)) {
-    attachments.push({
-      filename: quotation.attachment?.originalName || path.basename(attachmentPath),
-      path: attachmentPath
-    });
+  if (attachmentPath && typeof attachmentPath === 'string') {
+    if (attachmentPath.startsWith('http://') || attachmentPath.startsWith('https://')) {
+      attachments.push({
+        filename: quotation.attachment?.originalName || 'specification-document',
+        path: attachmentPath
+      });
+    } else if (fs.existsSync(attachmentPath)) {
+      attachments.push({
+        filename: quotation.attachment?.originalName || path.basename(attachmentPath),
+        path: attachmentPath
+      });
+    }
   }
 
   const htmlContent = `
@@ -177,11 +184,18 @@ const sendCustomerQuotationConfirmation = async (quotation, attachmentPath) => {
     attachments.push(logo);
   }
 
-  if (attachmentPath && fs.existsSync(attachmentPath)) {
-    attachments.push({
-      filename: quotation.attachment?.originalName || path.basename(attachmentPath),
-      path: attachmentPath
-    });
+  if (attachmentPath && typeof attachmentPath === 'string') {
+    if (attachmentPath.startsWith('http://') || attachmentPath.startsWith('https://')) {
+      attachments.push({
+        filename: quotation.attachment?.originalName || 'specification-document',
+        path: attachmentPath
+      });
+    } else if (fs.existsSync(attachmentPath)) {
+      attachments.push({
+        filename: quotation.attachment?.originalName || path.basename(attachmentPath),
+        path: attachmentPath
+      });
+    }
   }
 
   const htmlContent = `

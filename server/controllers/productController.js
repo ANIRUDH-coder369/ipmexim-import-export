@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const Product = require('../models/Product');
+const { uploadToCloudinary, isCloudinaryConfigured } = require('../config/cloudinary');
 
 // Initial seed catalog for first-time database initialization
 const INITIAL_SEED_PRODUCTS = [
@@ -226,8 +227,21 @@ const createProduct = async (req, res) => {
     // Handle uploaded file or image URL
     let imageUrls = [];
     if (req.file) {
-      const relativePath = `/uploads/products/${req.file.filename}`;
-      imageUrls.push(relativePath);
+      if (isCloudinaryConfigured()) {
+        try {
+          const uploadResult = await uploadToCloudinary(req.file.path, {
+            folder: 'ipmexim/products'
+          });
+          imageUrls.push(uploadResult.secure_url);
+        } catch (uploadErr) {
+          console.warn('[Cloudinary Product Upload Warning]', uploadErr.message);
+          const relativePath = `/uploads/products/${req.file.filename}`;
+          imageUrls.push(relativePath);
+        }
+      } else {
+        const relativePath = `/uploads/products/${req.file.filename}`;
+        imageUrls.push(relativePath);
+      }
     } else if (body.imageUrl) {
       imageUrls.push(body.imageUrl.trim());
     } else if (body.imageUrls) {
@@ -316,7 +330,20 @@ const updateProduct = async (req, res) => {
 
     // Update image if new file uploaded
     if (req.file) {
-      const newImagePath = `/uploads/products/${req.file.filename}`;
+      let newImagePath;
+      if (isCloudinaryConfigured()) {
+        try {
+          const uploadResult = await uploadToCloudinary(req.file.path, {
+            folder: 'ipmexim/products'
+          });
+          newImagePath = uploadResult.secure_url;
+        } catch (uploadErr) {
+          console.warn('[Cloudinary Product Update Warning]', uploadErr.message);
+          newImagePath = `/uploads/products/${req.file.filename}`;
+        }
+      } else {
+        newImagePath = `/uploads/products/${req.file.filename}`;
+      }
       product.imageUrls = [newImagePath, ...(product.imageUrls || []).slice(0, 3)];
     } else if (body.imageUrl) {
       product.imageUrls = [body.imageUrl.trim(), ...(product.imageUrls || []).slice(0, 3)];

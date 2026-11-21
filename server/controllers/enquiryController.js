@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const Enquiry = require('../models/Enquiry');
+const { uploadToCloudinary, isCloudinaryConfigured } = require('../config/cloudinary');
 const {
   sendNewQuotationNotification,
   sendCustomerQuotationConfirmation
@@ -58,13 +59,28 @@ const createEnquiry = async (req, res) => {
 
     // Prepare attachment metadata if file was uploaded
     let attachmentData = undefined;
+    let localTempPath = req.file?.path;
+    let finalAttachmentPath = req.file?.path;
+
     if (req.file) {
+      if (isCloudinaryConfigured()) {
+        try {
+          const uploadResult = await uploadToCloudinary(req.file.path, {
+            folder: 'ipmexim/enquiries',
+            resource_type: 'auto'
+          });
+          finalAttachmentPath = uploadResult.secure_url;
+        } catch (uploadErr) {
+          console.warn('[Cloudinary Enquiry Upload Warning]', uploadErr.message);
+        }
+      }
+
       attachmentData = {
         filename: req.file.filename,
         originalName: req.file.originalname,
         mimetype: req.file.mimetype,
         size: req.file.size,
-        path: req.file.path
+        path: finalAttachmentPath
       };
     }
 
@@ -86,12 +102,12 @@ const createEnquiry = async (req, res) => {
     });
 
     // 1. Send quotation notification email with all info to ipmexim@gmail.com
-    sendNewQuotationNotification(enquiry, req.file?.path).catch((mailErr) => {
+    sendNewQuotationNotification(enquiry, finalAttachmentPath || req.file?.path).catch((mailErr) => {
       console.error('[Admin Notification Email Error] Failed to send email to ipmexim@gmail.com:', mailErr.message);
     });
 
     // 2. Send auto confirmation email directly to the customer with all filled information
-    sendCustomerQuotationConfirmation(enquiry, req.file?.path).catch((mailErr) => {
+    sendCustomerQuotationConfirmation(enquiry, finalAttachmentPath || req.file?.path).catch((mailErr) => {
       console.error('[Customer Confirmation Email Error] Failed to send email to customer:', mailErr.message);
     });
 
@@ -211,6 +227,11 @@ const downloadAttachment = async (req, res) => {
         success: false,
         message: 'Attachment not found for this enquiry'
       });
+    }
+
+    // If file is stored on Cloudinary (HTTPS), redirect to the CDN URL
+    if (enquiry.attachment.path && (enquiry.attachment.path.startsWith('http://') || enquiry.attachment.path.startsWith('https://'))) {
+      return res.redirect(enquiry.attachment.path);
     }
 
     const filePath = path.resolve(enquiry.attachment.path);

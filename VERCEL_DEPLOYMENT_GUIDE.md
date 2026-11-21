@@ -43,6 +43,9 @@ In the Vercel project configuration screen, go to **Environment Variables** and 
 | `SMTP_PASS` | `ephajflwefjnokyu` | Gmail App Password |
 | `EMAIL_FROM` | `"IPM Exim" <ipmexim@gmail.com>` | Official sender header |
 | `NEXT_PUBLIC_API_URL` | `https://ipmexim-import-export.vercel.app/api` | Dedicated live backend Express API server on Vercel |
+| `CLOUDINARY_CLOUD_NAME` | `dagarr6bk` | Cloudinary Cloud Name for media CDN storage |
+| `CLOUDINARY_API_KEY` | `375596397315967` | Cloudinary API Key |
+| `CLOUDINARY_API_SECRET` | `4cw4-yhMsiXk4iYGYIfWXlrcb_E` | Cloudinary API Secret |
 
 ---
 
