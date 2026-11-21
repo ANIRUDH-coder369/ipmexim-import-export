@@ -139,7 +139,7 @@ const sendNewQuotationNotification = async (quotation, attachmentPath) => {
           </table>
         </div>
         <div class="footer">
-          IPM Exim Global &copy; 2026 &bull; Direct Commercial Channel Notification &bull; <a href="mailto:ipmexim@gmail.com" style="color: #c5a059;">ipmexim@gmail.com</a>
+          IPM Exim &copy; 2026 &bull; Direct Commercial Channel Notification &bull; <a href="mailto:ipmexim@gmail.com" style="color: #c5a059;">ipmexim@gmail.com</a>
         </div>
       </div>
     </body>
@@ -166,7 +166,7 @@ const sendCustomerQuotationConfirmation = async (quotation, attachmentPath) => {
     return;
   }
 
-  const fromAddress = process.env.EMAIL_FROM || '"IPM Exim Global" <ipmexim@gmail.com>';
+  const fromAddress = process.env.EMAIL_FROM || '"IPM Exim" <ipmexim@gmail.com>';
   const transporter = createTransporter();
 
   const attachments = [];
@@ -254,7 +254,7 @@ const sendCustomerQuotationConfirmation = async (quotation, attachmentPath) => {
           </div>
         </div>
         <div class="footer">
-          IPM Exim Global &bull; International Trade Sourcing &bull; India Origin Gateway<br/>
+          IPM Exim &bull; International Trade Sourcing &bull; India Origin Gateway<br/>
           Official Commercial Desk: <a href="mailto:ipmexim@gmail.com" style="color: #c5a059;">ipmexim@gmail.com</a>
         </div>
       </div>
@@ -276,7 +276,7 @@ const sendCustomerQuotationConfirmation = async (quotation, attachmentPath) => {
  * 3. Send email from Admin to Customer (with official Logo embedded)
  */
 const sendEmailToCustomer = async ({ to, subject, message, html, adminName, quotationId, attachmentPath }) => {
-  const fromAddress = process.env.EMAIL_FROM || '"IPM Exim Global" <ipmexim@gmail.com>';
+  const fromAddress = process.env.EMAIL_FROM || '"IPM Exim" <ipmexim@gmail.com>';
   const transporter = createTransporter();
 
   const attachments = [];
@@ -323,7 +323,7 @@ const sendEmailToCustomer = async ({ to, subject, message, html, adminName, quot
           <p style="margin-top: 25px; font-size: 14px; color: #9da3af;">
             Warm regards,<br/>
             <strong style="color: #ffffff;">${adminName || 'Commercial Trade Desk'}</strong><br/>
-            <span style="color: #c5a059;">IPM Exim Global</span><br/>
+            <span style="color: #c5a059;">IPM Exim</span><br/>
             <a href="mailto:ipmexim@gmail.com" style="color: #c5a059;">ipmexim@gmail.com</a>
           </p>
         </div>
