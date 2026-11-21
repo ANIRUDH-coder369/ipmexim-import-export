@@ -10,6 +10,7 @@ const enquiryRoutes = require('./routes/enquiryRoutes');
 const seoRoutes = require('./routes/seoRoutes');
 const productLineRoutes = require('./routes/productLineRoutes');
 const productRoutes = require('./routes/productRoutes');
+const shipmentRoutes = require('./routes/shipmentRoutes');
 const {
   helmetMiddleware,
   sanitizeInputMiddleware,
@@ -128,6 +129,10 @@ app.use('/product-lines', productLineRoutes);
 // 13. Mount Featured Export Products Routes (Dynamic Catalog CRUD)
 app.use('/api/products', productRoutes);
 app.use('/products', productRoutes);
+
+// 14. Mount Shipment & Consignment Routes (Dynamic From/To, Date, Video Links)
+app.use('/api/shipments', shipmentRoutes);
+app.use('/shipments', shipmentRoutes);
 
 // 14. 404 Route Handler
 app.use((req, res) => {

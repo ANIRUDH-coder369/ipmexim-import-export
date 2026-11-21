@@ -140,6 +140,7 @@ export const Footer: React.FC = () => {
               <li><Link href="/services" className="hover:text-gold-champagne transition-colors">{t('footer.exportServices')}</Link></li>
               <li><Link href="/quality-certifications" className="hover:text-gold-champagne transition-colors">{t('footer.qualityStandards')}</Link></li>
               <li><Link href="/gallery" className="hover:text-gold-champagne transition-colors">{t('footer.tradeGallery')}</Link></li>
+              <li><Link href="/shipments" className="hover:text-gold-champagne transition-colors">Live Consignments &amp; Videos</Link></li>
               <li><Link href="/contact" className="hover:text-gold-champagne transition-colors">{t('footer.contactUs')}</Link></li>
               <li><Link href="/privacy-policy" className="hover:text-gold-champagne transition-colors">{t('footer.privacyPolicy')}</Link></li>
             </ul>

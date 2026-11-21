@@ -35,6 +35,12 @@ import {
   Upload,
   Image as ImageIcon,
   Package,
+  Navigation,
+  MapPin,
+  Anchor,
+  Calendar,
+  Play,
+  ArrowRight,
 } from 'lucide-react';
 import { getApiUrl } from '@/utils/apiConfig';
 import { ProductItem } from '@/store/slices/productSlice';
@@ -224,8 +230,8 @@ export default function AdminDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
   
-  // Navigation Tabs: 'quotations' | 'products' | 'productLines'
-  const [activeAdminTab, setActiveAdminTab] = useState<'quotations' | 'products' | 'productLines'>('quotations');
+  // Navigation Tabs: 'quotations' | 'products' | 'productLines' | 'shipments'
+  const [activeAdminTab, setActiveAdminTab] = useState<'quotations' | 'products' | 'productLines' | 'shipments'>('quotations');
 
   // Quotation Management State
   const [quotations, setQuotations] = useState<QuotationEntry[]>([]);
@@ -286,6 +292,25 @@ export default function AdminDashboardPage() {
   const [plSuccess, setPlSuccess] = useState<string | null>(null);
   const [isSavingPl, setIsSavingPl] = useState(false);
 
+  // Dynamic Shipment & Consignment Journeys State
+  const [shipmentsList, setShipmentsList] = useState<any[]>([]);
+  const [shipSearchQuery, setShipSearchQuery] = useState('');
+  const [shipStatusFilter, setShipStatusFilter] = useState('ALL');
+  const [isShipModalOpen, setIsShipModalOpen] = useState(false);
+  const [editingShipment, setEditingShipment] = useState<any | null>(null);
+  const [shipFormData, setShipFormData] = useState({
+    title: '',
+    fromLocation: '',
+    toLocation: '',
+    date: new Date().toISOString().split('T')[0],
+    mediaLink: '',
+    description: '',
+    status: 'In Transit' as 'In Transit' | 'Scheduled' | 'Dispatched' | 'Delivered'
+  });
+  const [isSavingShipment, setIsSavingShipment] = useState(false);
+  const [shipNotice, setShipNotice] = useState<string | null>(null);
+  const [shipError, setShipError] = useState<string | null>(null);
+
   // Strict Authentication Guard Check
   useEffect(() => {
     const checkAuthentication = async () => {
@@ -320,6 +345,7 @@ export default function AdminDashboardPage() {
           fetchQuotations(token);
           fetchProductsAdmin(token);
           fetchProductLinesAdmin(token);
+          fetchShipmentsAdmin(token);
           return;
         } else if (res.status === 401 || res.status === 403) {
           document.cookie = 'adminToken=; path=/; max-age=0; SameSite=Lax';
@@ -345,6 +371,7 @@ export default function AdminDashboardPage() {
       fetchQuotations(token);
       fetchProductsAdmin(token);
       fetchProductLinesAdmin(token);
+      fetchShipmentsAdmin(token);
     };
 
     checkAuthentication();
@@ -478,6 +505,141 @@ export default function AdminDashboardPage() {
 
     // Fallback to initial PRODUCTS catalog
     setProductsList(PRODUCTS as any);
+  };
+
+  // ========================================================
+  // SHIPMENT / CONSIGNMENT JOURNEYS HANDLERS
+  // ========================================================
+
+  const fetchShipmentsAdmin = async (token?: string | null) => {
+    try {
+      const apiUrl = getApiUrl();
+      const res = await fetch(`${apiUrl}/shipments`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.shipments)) {
+          setShipmentsList(data.shipments);
+        }
+      }
+    } catch (err) {
+      console.warn('Backend shipments offline:', err);
+    }
+  };
+
+  const handleOpenAddShipment = () => {
+    setEditingShipment(null);
+    setShipFormData({
+      title: '',
+      fromLocation: '',
+      toLocation: '',
+      date: new Date().toISOString().split('T')[0],
+      mediaLink: '',
+      description: '',
+      status: 'In Transit'
+    });
+    setShipError(null);
+    setShipNotice(null);
+    setIsShipModalOpen(true);
+  };
+
+  const handleOpenEditShipment = (ship: any) => {
+    setEditingShipment(ship);
+    const dateStr = ship.date ? new Date(ship.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    setShipFormData({
+      title: ship.title || '',
+      fromLocation: ship.fromLocation || '',
+      toLocation: ship.toLocation || '',
+      date: dateStr,
+      mediaLink: ship.mediaLink || '',
+      description: ship.description || '',
+      status: ship.status || 'In Transit'
+    });
+    setShipError(null);
+    setShipNotice(null);
+    setIsShipModalOpen(true);
+  };
+
+  const handleSaveShipment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!shipFormData.fromLocation.trim() || !shipFormData.toLocation.trim() || !shipFormData.date || !shipFormData.mediaLink.trim()) {
+      setShipError('Please fill in From Location, Destination, Date, and Media Link.');
+      return;
+    }
+
+    setIsSavingShipment(true);
+    setShipError(null);
+
+    try {
+      const apiUrl = getApiUrl();
+      const token = localStorage.getItem('adminToken');
+      const isEditing = Boolean(editingShipment?._id || editingShipment?.id);
+      const targetId = editingShipment?._id || editingShipment?.id;
+      const url = isEditing ? `${apiUrl}/shipments/${targetId}` : `${apiUrl}/shipments`;
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(shipFormData)
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to save shipment.');
+      }
+
+      await fetchShipmentsAdmin();
+      setIsShipModalOpen(false);
+    } catch (err: any) {
+      setShipError(err.message || 'Error saving shipment.');
+    } finally {
+      setIsSavingShipment(false);
+    }
+  };
+
+  const handleDeleteShipment = async (ship: any) => {
+    const targetId = ship._id || ship.id;
+    if (!targetId) return;
+    if (!window.confirm(`Are you sure you want to delete shipment "${ship.title || ship.fromLocation}"?`)) return;
+
+    try {
+      const apiUrl = getApiUrl();
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`${apiUrl}/shipments/${targetId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to delete shipment');
+      }
+      await fetchShipmentsAdmin();
+    } catch (err: any) {
+      alert(err.message || 'Error deleting shipment');
+    }
+  };
+
+  const getYouTubeEmbedUrl = (url: string): string | null => {
+    if (!url) return null;
+    try {
+      const trimmed = url.trim();
+      const watchMatch = trimmed.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+      if (watchMatch && watchMatch[1]) {
+        return `https://www.youtube-nocookie.com/embed/${watchMatch[1]}?autoplay=1&rel=0`;
+      }
+      const shortsMatch = trimmed.match(/youtube\.com\/shorts\/([^"&?\/\s]{11})/i);
+      if (shortsMatch && shortsMatch[1]) {
+        return `https://www.youtube-nocookie.com/embed/${shortsMatch[1]}?autoplay=1&rel=0`;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
   };
 
   // ========================================================
@@ -882,6 +1044,24 @@ export default function AdminDashboardPage() {
     });
   }, [productsList, prodSearchQuery, prodCategoryFilter]);
 
+  // Filter Shipments (Sequenced upside / newest date first)
+  const filteredAdminShipments = useMemo(() => {
+    return shipmentsList
+      .filter((s) => {
+        if (shipStatusFilter !== 'ALL' && s.status !== shipStatusFilter) return false;
+        if (shipSearchQuery.trim()) {
+          const q = shipSearchQuery.toLowerCase();
+          return (
+            s.title?.toLowerCase().includes(q) ||
+            s.fromLocation?.toLowerCase().includes(q) ||
+            s.toLocation?.toLowerCase().includes(q)
+          );
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [shipmentsList, shipSearchQuery, shipStatusFilter]);
+
   const productStats = useMemo(() => {
     const total = productsList.length;
     const featured = productsList.filter(p => p.featured).length;
@@ -1179,13 +1359,27 @@ export default function AdminDashboardPage() {
               <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               <span>Product Lines & Requirements Control ({productLines.length})</span>
             </button>
+
+            <button
+              onClick={() => setActiveAdminTab('shipments')}
+              className={`flex items-center justify-center gap-2.5 sm:gap-3 px-4 sm:px-6 py-3 sm:py-3.5 rounded-xl border text-xs sm:text-base font-bold tracking-wide transition-all cursor-pointer min-h-[44px] ${
+                activeAdminTab === 'shipments'
+                  ? 'btn-glass-morphism shadow-xl'
+                  : 'hover:border-gold-border/40'
+              }`}
+              style={activeAdminTab !== 'shipments' ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)', color: 'var(--text-secondary)' } : {}}
+            >
+              <Navigation className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
+              <span>Consignments &amp; Videos ({shipmentsList.length})</span>
+            </button>
           </div>
 
           <button
             onClick={() => {
               if (activeAdminTab === 'quotations') fetchQuotations();
               else if (activeAdminTab === 'products') fetchProductsAdmin();
-              else fetchProductLinesAdmin();
+              else if (activeAdminTab === 'productLines') fetchProductLinesAdmin();
+              else fetchShipmentsAdmin();
             }}
             disabled={isLoading}
             className="inline-flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl border text-xs sm:text-sm font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm hover:border-gold-border min-h-[44px]"
@@ -1790,7 +1984,513 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
+
+        {/* ========================================================
+            TAB 4: DYNAMIC SHIPMENTS & VIDEO JOURNEYS MANAGEMENT
+            ======================================================== */}
+        {activeAdminTab === 'shipments' && (
+          <div className="space-y-10 animate-fade-in">
+            {/* Header & Add Button */}
+            <div 
+              className="p-8 sm:p-10 rounded-2xl border shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6"
+              style={{
+                backgroundColor: 'var(--bg-card)',
+                borderColor: 'var(--border-card)',
+              }}
+            >
+              <div>
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold mb-3 border"
+                  style={{
+                    backgroundColor: 'rgba(6, 182, 212, 0.12)',
+                    borderColor: 'rgba(6, 182, 212, 0.3)',
+                    color: '#22d3ee',
+                  }}
+                >
+                  <Navigation className="w-3.5 h-3.5" />
+                  <span>Maritime Logistics &amp; Dynamic Route Verification</span>
+                </div>
+                <h2 className="font-serif text-2xl sm:text-3xl font-normal" style={{ color: 'var(--text-primary)' }}>
+                  Consignment Journeys &amp; Video Proofs Control
+                </h2>
+                <p className="text-sm mt-1 max-w-2xl" style={{ color: 'var(--text-muted)' }}>
+                  Manage origin, reach destination, calendar dates (sequenced upside / newest first), and interactive video links for international buyer verification.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleOpenAddShipment}
+                  className="btn-gold flex items-center gap-2.5 px-6 py-3.5 rounded-xl text-sm font-bold tracking-wide shadow-xl cursor-pointer"
+                >
+                  <Plus className="w-5 h-5 text-black" />
+                  <span>Add New Consignment</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Filter & Search Controls */}
+            <div 
+              className="p-4 sm:p-5 rounded-2xl border shadow-md flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4"
+              style={{
+                backgroundColor: 'var(--bg-card)',
+                borderColor: 'var(--border-card)',
+              }}
+            >
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Filter by origin port, destination, or consignment title..."
+                  value={shipSearchQuery}
+                  onChange={(e) => setShipSearchQuery(e.target.value)}
+                  className="w-full pl-11 pr-4 py-2.5 rounded-xl border text-sm transition-colors focus:outline-none"
+                  style={{
+                    backgroundColor: 'var(--bg-input)',
+                    borderColor: 'var(--border-subtle)',
+                    color: 'var(--text-primary)',
+                  }}
+                />
+              </div>
+
+              {/* Status Filter Buttons */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+                {['ALL', 'In Transit', 'Scheduled', 'Delivered'].map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setShipStatusFilter(status)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                      shipStatusFilter === status
+                        ? 'border shadow-sm'
+                        : 'border border-transparent hover:opacity-80'
+                    }`}
+                    style={
+                      shipStatusFilter === status
+                        ? {
+                            backgroundColor: 'var(--gold-muted)',
+                            borderColor: 'var(--gold-border)',
+                            color: 'var(--gold)'
+                          }
+                        : {
+                            backgroundColor: 'var(--bg-topbar)',
+                            color: 'var(--text-secondary)'
+                          }
+                    }
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Consignments Table (Sequenced upside on Date) */}
+            <div 
+              className="rounded-2xl border shadow-xl overflow-hidden"
+              style={{
+                backgroundColor: 'var(--bg-card)',
+                borderColor: 'var(--border-card)',
+              }}
+            >
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b text-xs font-bold uppercase tracking-wider" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-topbar)', color: 'var(--text-muted)' }}>
+                      <th className="py-4 px-6">Date (Calendar)</th>
+                      <th className="py-4 px-6">Origin (Where From) &rarr; Reach Destination</th>
+                      <th className="py-4 px-6">Consignment Details</th>
+                      <th className="py-4 px-6">Status</th>
+                      <th className="py-4 px-6">Video / Media Proof</th>
+                      <th className="py-4 px-6 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y text-sm" style={{ borderColor: 'var(--border-subtle)' }}>
+                    {filteredAdminShipments.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-16 text-center" style={{ color: 'var(--text-muted)' }}>
+                          <Navigation className="w-10 h-10 mx-auto mb-2 opacity-40 text-cyan-400" />
+                          <p className="text-base font-serif font-medium" style={{ color: 'var(--text-primary)' }}>No consignments found</p>
+                          <p className="text-xs mt-1">Click &quot;Add New Consignment&quot; to register a trade shipment route.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredAdminShipments.map((ship: any) => {
+                        const dateFormatted = new Date(ship.date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        });
+                        const isYT = Boolean(getYouTubeEmbedUrl(ship.mediaLink));
+
+                        return (
+                          <tr key={ship._id || ship.id} className="hover:bg-white/[0.02] transition-colors">
+                            {/* Calendar Date (Upside sequence) */}
+                            <td className="py-5 px-6 whitespace-nowrap">
+                              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-mono font-bold"
+                                style={{
+                                  backgroundColor: 'rgba(212, 175, 105, 0.08)',
+                                  borderColor: 'var(--gold-border)',
+                                  color: 'var(--gold)'
+                                }}
+                              >
+                                <Calendar className="w-3.5 h-3.5" />
+                                <span>{dateFormatted}</span>
+                              </div>
+                            </td>
+
+                            {/* Origin & Reach Destination */}
+                            <td className="py-5 px-6">
+                              <div className="space-y-1.5">
+                                <div className="flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--text-primary)' }}>
+                                  <Anchor className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                                  <span>{ship.fromLocation}</span>
+                                </div>
+                                <div className="flex items-center gap-2 pl-4 text-xs font-medium" style={{ color: 'var(--gold)' }}>
+                                  <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                                  <span>{ship.toLocation}</span>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Title & Notes */}
+                            <td className="py-5 px-6 max-w-xs">
+                              <span className="font-medium block truncate" style={{ color: 'var(--text-primary)' }}>
+                                {ship.title}
+                              </span>
+                              {ship.description && (
+                                <span className="text-xs block truncate" style={{ color: 'var(--text-muted)' }}>
+                                  {ship.description}
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Status */}
+                            <td className="py-5 px-6 whitespace-nowrap">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                ship.status === 'In Transit'
+                                  ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
+                                  : ship.status === 'Delivered'
+                                  ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                  : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                              }`}>
+                                {ship.status === 'In Transit' && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping inline-block" />}
+                                {ship.status === 'Delivered' && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
+                                {ship.status === 'Scheduled' && <Clock className="w-3 h-3 text-amber-400" />}
+                                <span>{ship.status}</span>
+                              </span>
+                            </td>
+
+                            {/* Video / Media Link */}
+                            <td className="py-5 px-6 whitespace-nowrap">
+                              <a
+                                href={ship.mediaLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold hover:border-cyan-400/50 transition-colors"
+                                style={{
+                                  backgroundColor: 'var(--bg-topbar)',
+                                  borderColor: 'var(--border-subtle)',
+                                  color: 'var(--text-primary)'
+                                }}
+                              >
+                                {isYT ? (
+                                  <>
+                                    <div className="w-4 h-4 rounded-full bg-red-600 flex items-center justify-center text-white shrink-0">
+                                      <Play className="w-2.5 h-2.5 fill-current ml-0.5" />
+                                    </div>
+                                    <span>Watch Video</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+                                    <span>Open Link</span>
+                                  </>
+                                )}
+                              </a>
+                            </td>
+
+                            {/* Actions */}
+                            <td className="py-5 px-6 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-2.5">
+                                <button
+                                  onClick={() => handleOpenEditShipment(ship)}
+                                  className="p-2 rounded-xl border hover:border-gold-border hover:text-[#D4AF69] transition-colors cursor-pointer"
+                                  style={{
+                                    backgroundColor: 'var(--bg-topbar)',
+                                    borderColor: 'var(--border-subtle)',
+                                    color: 'var(--text-secondary)'
+                                  }}
+                                  title="Edit Consignment"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteShipment(ship)}
+                                  className="p-2 rounded-xl border hover:border-red-500/50 hover:text-red-400 transition-colors cursor-pointer text-red-400/80"
+                                  style={{
+                                    backgroundColor: 'var(--bg-topbar)',
+                                    borderColor: 'var(--border-subtle)'
+                                  }}
+                                  title="Delete Consignment"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* ========================================================
+          MODAL: ADD / EDIT SHIPMENT CONSIGNMENT DIALOG
+          ======================================================== */}
+      {isShipModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+          style={{ backgroundColor: 'var(--modal-overlay)', backdropFilter: 'blur(8px)' }}
+        >
+          <div 
+            className="relative w-full max-w-xl my-8 rounded-2xl border shadow-2xl p-6 sm:p-8 space-y-6"
+            style={{
+              backgroundColor: 'var(--bg-card)',
+              borderColor: 'var(--border-card)',
+              color: 'var(--text-primary)',
+            }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--border-subtle)' }}>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl border" style={{ backgroundColor: 'rgba(6, 182, 212, 0.1)', borderColor: 'rgba(6, 182, 212, 0.3)' }}>
+                  <Navigation className="w-5 h-5 text-cyan-400" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-xl sm:text-2xl font-normal" style={{ color: 'var(--text-primary)' }}>
+                    {editingShipment ? 'Update Consignment Journey' : 'Add New Consignment Journey'}
+                  </h3>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Configure origin, destination, calendar date, and video proof link.
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsShipModalOpen(false)}
+                className="p-2 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Error Banner */}
+            {shipError && (
+              <div className="p-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                <span>{shipError}</span>
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleSaveShipment} className="space-y-4">
+              {/* Consignment Title */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                  Consignment Title / Cargo
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 1121 Basmati Rice & Spices Consignment #8821"
+                  value={shipFormData.title}
+                  onChange={(e) => setShipFormData({ ...shipFormData, title: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border text-sm transition-colors focus:outline-none"
+                  style={{
+                    backgroundColor: 'var(--bg-input)',
+                    borderColor: 'var(--border-subtle)',
+                    color: 'var(--text-primary)'
+                  }}
+                />
+              </div>
+
+              {/* Origin (Where From) & Reach Destination (To) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Origin Location (Where From) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Nhava Sheva (JNPT), Mumbai, India"
+                    value={shipFormData.fromLocation}
+                    onChange={(e) => setShipFormData({ ...shipFormData, fromLocation: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border text-sm transition-colors focus:outline-none"
+                    style={{
+                      backgroundColor: 'var(--bg-input)',
+                      borderColor: 'var(--border-subtle)',
+                      color: 'var(--text-primary)'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Reach Destination (To Port / Country) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Jebel Ali Port, Dubai, UAE"
+                    value={shipFormData.toLocation}
+                    onChange={(e) => setShipFormData({ ...shipFormData, toLocation: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border text-sm transition-colors focus:outline-none"
+                    style={{
+                      backgroundColor: 'var(--bg-input)',
+                      borderColor: 'var(--border-subtle)',
+                      color: 'var(--text-primary)'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Calendar Date & Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Dispatch / Shipment Date (Calendar) *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={shipFormData.date}
+                    onChange={(e) => setShipFormData({ ...shipFormData, date: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border text-sm transition-colors focus:outline-none cursor-pointer"
+                    style={{
+                      backgroundColor: 'var(--bg-input)',
+                      borderColor: 'var(--border-subtle)',
+                      color: 'var(--text-primary)'
+                    }}
+                  />
+                  <span className="text-[10px] text-slate-400 mt-1 block">Sorted upside (newest dates on top).</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Transit Status
+                  </label>
+                  <select
+                    value={shipFormData.status}
+                    onChange={(e: any) => setShipFormData({ ...shipFormData, status: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border text-sm transition-colors focus:outline-none cursor-pointer"
+                    style={{
+                      backgroundColor: 'var(--bg-input)',
+                      borderColor: 'var(--border-subtle)',
+                      color: 'var(--text-primary)'
+                    }}
+                  >
+                    <option value="In Transit">In Transit</option>
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="Dispatched">Dispatched</option>
+                    <option value="Delivered">Delivered</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Video / Media Link */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                  Video / Proof Media Link (YouTube, Tracking, or Footage) *
+                </label>
+                <input
+                  type="url"
+                  required
+                  placeholder="e.g. https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                  value={shipFormData.mediaLink}
+                  onChange={(e) => setShipFormData({ ...shipFormData, mediaLink: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border text-sm transition-colors focus:outline-none"
+                  style={{
+                    backgroundColor: 'var(--bg-input)',
+                    borderColor: 'var(--border-subtle)',
+                    color: 'var(--text-primary)'
+                  }}
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Customers can click this link to watch video proof or view tracking directly.
+                </span>
+              </div>
+
+              {/* Live YouTube Embed Preview */}
+              {getYouTubeEmbedUrl(shipFormData.mediaLink) && (
+                <div className="rounded-xl border border-white/10 bg-black/40 p-3 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-cyan-400">
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>Live YouTube Player Preview</span>
+                  </div>
+                  <div className="relative w-full pb-[56.25%] rounded-lg overflow-hidden border border-white/10 bg-black">
+                    <iframe
+                      src={getYouTubeEmbedUrl(shipFormData.mediaLink)!}
+                      title="YouTube Preview"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      className="absolute inset-0 w-full h-full border-0"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Notes / Description */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                  Transit Notes / Description (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. 2 x 40ft FCL containerized export, SGS quality inspection verified, sealed maritime packaging."
+                  value={shipFormData.description}
+                  onChange={(e) => setShipFormData({ ...shipFormData, description: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border text-sm transition-colors focus:outline-none resize-none"
+                  style={{
+                    backgroundColor: 'var(--bg-input)',
+                    borderColor: 'var(--border-subtle)',
+                    color: 'var(--text-primary)'
+                  }}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsShipModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl border text-xs font-semibold hover:bg-white/5 transition-colors cursor-pointer"
+                  style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-secondary)' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingShipment}
+                  className="btn-gold flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold tracking-wider uppercase shadow-xl cursor-pointer"
+                >
+                  {isSavingShipment ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <span>{editingShipment ? 'Update Consignment' : 'Save Consignment'}</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================
           MODAL 1: ADD / EDIT PRODUCT LINE DIALOG

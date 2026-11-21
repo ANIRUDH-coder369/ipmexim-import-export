@@ -31,6 +31,7 @@ export const Header: React.FC = () => {
     { label: t('nav.services'), path: '/services' },
     { label: t('nav.quality'), path: '/quality-certifications' },
     { label: t('nav.gallery'), path: '/gallery' },
+    { label: 'Shipments', path: '/shipments' },
     { label: t('nav.contact'), path: '/contact' },
   ];
 
