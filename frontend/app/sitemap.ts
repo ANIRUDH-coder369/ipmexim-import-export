@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 import { PRODUCTS } from '@/data/products';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ipmexim-import-export-frontend.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.ipmexim.com';
   const currentDate = new Date();
 
   const staticRoutes: MetadataRoute.Sitemap = [

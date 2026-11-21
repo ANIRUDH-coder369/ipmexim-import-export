@@ -10,7 +10,7 @@ import { LanguageProvider } from "@/context/LanguageContext";
 import { ReduxProvider } from "@/components/providers/ReduxProvider";
 import { OrganizationJsonLd, WebSiteJsonLd, FaqJsonLd } from "@/components/seo/JsonLd";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ipmexim-import-export-frontend.vercel.app';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.ipmexim.com';
 
 export const viewport: Viewport = {
   themeColor: [

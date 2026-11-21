@@ -513,11 +513,25 @@ export default function ContactPage() {
                   <span className="block font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Official Web Gateways:</span>
                   <div className="flex flex-col gap-1.5 font-mono text-[11px]">
                     <a
+                      href="https://www.ipmexim.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 hover:text-gold-champagne hover:underline transition-colors font-semibold"
+                      style={{ color: 'var(--text-primary)' }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] inline-block shadow-[0_0_6px_#10B981]" />
+                      <span>www.ipmexim.com</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#D4AF69]/20 text-[#D4AF69] uppercase tracking-wider font-sans ml-1">
+                        Official Domain
+                      </span>
+                      <ExternalLink className="w-3 h-3 text-[#10B981]" />
+                    </a>
+                    <a
                       href="https://ipmexim-import-export-frontend.vercel.app/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 hover:text-gold-champagne hover:underline transition-colors"
-                      style={{ color: 'var(--text-primary)' }}
+                      className="inline-flex items-center gap-1.5 hover:text-gold-champagne hover:underline transition-colors opacity-85 hover:opacity-100"
+                      style={{ color: 'var(--text-secondary)' }}
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] inline-block" />
                       <span>ipmexim-import-export-frontend.vercel.app</span>

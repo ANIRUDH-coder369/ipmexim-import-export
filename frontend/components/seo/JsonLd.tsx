@@ -1,7 +1,7 @@
 import React from 'react';
 import { COMPANY_INFO, FAQS } from '@/data/company';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ipmexim-import-export-frontend.vercel.app';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.ipmexim.com';
 
 export const OrganizationJsonLd: React.FC = () => {
   const schema = {
@@ -45,6 +45,7 @@ export const OrganizationJsonLd: React.FC = () => {
       'APEDA & FIEO Regulatory Trade Documentation',
     ],
     sameAs: [
+      'https://www.ipmexim.com/',
       COMPANY_INFO.socialLinks.linkedin,
       COMPANY_INFO.socialLinks.instagram,
       COMPANY_INFO.socialLinks.facebook,

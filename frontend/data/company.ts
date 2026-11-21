@@ -5,9 +5,10 @@ export const COMPANY_INFO = {
   legalStructure: 'Proprietorship',
   tagline: 'Connecting Global Markets. Delivering Quality from India.',
   email: 'ipmexim@gmail.com',
-  website: 'https://ipmexim-import-export-frontend.vercel.app/',
-  alternateWebsite: 'https://ipmexim-import-export.vercel.app/',
+  website: 'https://www.ipmexim.com/',
+  alternateWebsite: 'https://ipmexim-import-export-frontend.vercel.app/',
   websites: [
+    'https://www.ipmexim.com/',
     'https://ipmexim-import-export-frontend.vercel.app/',
     'https://ipmexim-import-export.vercel.app/'
   ],
