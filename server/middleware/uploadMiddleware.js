@@ -1,11 +1,20 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
-// Ensure upload directory exists
-const uploadDir = path.resolve(__dirname, '../uploads/enquiries');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Detect serverless environment (Vercel, AWS Lambda) where /var/task is read-only
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const uploadDir = isServerless
+  ? path.join(os.tmpdir(), 'uploads', 'enquiries')
+  : path.resolve(__dirname, '../uploads/enquiries');
+
+try {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+} catch (err) {
+  console.warn('[Upload Directory Warning]', err.message);
 }
 
 // Storage configuration

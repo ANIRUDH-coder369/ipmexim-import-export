@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const os = require('os');
+const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 const adminRoutes = require('./routes/adminRoutes');
 const enquiryRoutes = require('./routes/enquiryRoutes');
@@ -28,18 +30,46 @@ app.disable('x-powered-by');
 // 3. Security HTTP Headers (Helmet)
 app.use(helmetMiddleware);
 
-// Body Parser Middleware with strict payload limits (prevents payload attacks)
+// 4. Body Parser Middleware with strict payload limits (prevents payload attacks)
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// NoSQL Injection Sanitization (strips $ and . operators)
+// 5. NoSQL Injection Sanitization (strips $ and . operators)
 app.use(sanitizeInputMiddleware);
 
-// Serve uploaded static assets (product photos, spec sheets)
+// 6. Serve uploaded static assets (product photos, spec sheets)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(os.tmpdir(), 'uploads')));
 
-// Mount SEO Routes (robots.txt & sitemap.xml for search engines)
+// 7. Mount SEO Routes (robots.txt & sitemap.xml for search engines)
 app.use('/', seoRoutes);
+
+// 8. Health check endpoints (Lightweight, zero-DB-wait for instant Vercel checks)
+app.get('/health', (req, res) => {
+  const isDbConnected = mongoose.connection.readyState === 1;
+  res.status(200).json({
+    status: 'OK',
+    service: 'IPM Exim Global API',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'production',
+    database: isDbConnected ? 'connected' : 'connecting_or_disconnected'
+  });
+});
+
+app.get('/', (req, res) => {
+  const isDbConnected = mongoose.connection.readyState === 1;
+  res.status(200).json({
+    status: 'OK',
+    message: 'Import-Export Backend API is running on Vercel.',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    database: isDbConnected ? 'connected' : 'connecting_or_disconnected'
+  });
+});
+
+// Flag to ensure auto-seed runs only once per instance
+let isSeeded = false;
 
 // Auto-seed admin if none exists
 const autoSeedAdmin = async () => {
@@ -63,40 +93,43 @@ const autoSeedAdmin = async () => {
   }
 };
 
-// Mount Admin Routes
+// 9. Serverless Database Connection Middleware
+// Ensures MongoDB is connected before handling dynamic API routes
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    if (!isSeeded && mongoose.connection.readyState === 1) {
+      isSeeded = true;
+      autoSeedAdmin().catch((err) => {
+        console.error('[AutoSeed Error]', err.message);
+      });
+    }
+  } catch (err) {
+    console.warn('[Database Middleware Notice] Could not connect to MongoDB:', err.message);
+  }
+  next();
+});
+
+// 10. Mount Admin Routes
 app.use('/admin', adminRoutes);
-// Optional alias for API standard convention
 app.use('/api/admin', adminRoutes);
 
-// Mount Sourcing Enquiry & Quotation Routes
+// 11. Mount Sourcing Enquiry & Quotation Routes
 app.use('/api/enquiries', enquiryRoutes);
 app.use('/enquiries', enquiryRoutes);
 app.use('/admin/enquiries', enquiryRoutes);
 app.use('/api/quotations', enquiryRoutes);
 app.use('/quotations', enquiryRoutes);
 
-// Mount Product Lines / Sourcing Requirements Routes (Dynamic Quotation Options)
+// 12. Mount Product Lines / Sourcing Requirements Routes (Dynamic Quotation Options)
 app.use('/api/product-lines', productLineRoutes);
 app.use('/product-lines', productLineRoutes);
 
-// Mount Featured Export Products Routes (Dynamic Catalog CRUD)
+// 13. Mount Featured Export Products Routes (Dynamic Catalog CRUD)
 app.use('/api/products', productRoutes);
 app.use('/products', productRoutes);
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.get('/', (req, res) => {
-  res.send('Import-Export Backend API is running.');
-});
-
-// 404 Route Handler
+// 14. 404 Route Handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -104,7 +137,7 @@ app.use((req, res) => {
   });
 });
 
-// Global Error Handler
+// 15. Global Error Handler
 app.use((err, req, res, next) => {
   console.error('[Error]', err.stack || err.message);
   res.status(err.status || 500).json({
@@ -115,7 +148,7 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-// Start server if run directly
+// Start server if run directly (Local development)
 if (require.main === module) {
   connectDB()
     .then(async () => {

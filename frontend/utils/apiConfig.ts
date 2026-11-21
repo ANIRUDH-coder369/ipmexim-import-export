@@ -13,8 +13,8 @@ export const getApiUrl = (): string => {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host !== 'localhost' && host !== '127.0.0.1') {
-      // Production live backend or custom domain
-      return 'https://ipmexim-import-export-backend.onrender.com/api';
+      // Production live backend on Vercel
+      return 'https://ipmexim-import-export.vercel.app/api';
     }
   }
 
