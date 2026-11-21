@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -7,12 +7,104 @@ import { GoogleTranslateEngine } from "@/components/common/GoogleTranslateEngine
 import { QuoteProvider } from "@/context/QuoteContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
+import { OrganizationJsonLd, WebSiteJsonLd, FaqJsonLd } from "@/components/seo/JsonLd";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ipmexim-import-export-frontend.vercel.app';
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#FAF8F5' },
+    { media: '(prefers-color-scheme: dark)', color: '#090A0C' },
+  ],
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
 
 export const metadata: Metadata = {
-  title: "IPM Exim — Luxury Global Export-Import & Sourcing",
-  description: "Connecting Global Markets. Delivering Quality from India. Verified B2B export commodities, high-aroma spices, Basmati rice, luxury textiles, copperware, and agricultural staples.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "IPM Exim — Luxury Global Export-Import & Sourcing",
+    template: "%s | IPM Exim Global Trade",
+  },
+  description: "India's premier international export house & B2B trade gateway. Direct sourcing of 1121 Basmati Rice, Alleppey Green Cardamom, Salem Turmeric, Guntur Red Chilli, Pure Mulberry Silk, and Artisanal Copperware with verified SGS, APEDA, and ISO quality certification.",
+  keywords: [
+    "IPM Exim",
+    "Indian Basmati rice exporter",
+    "1121 steam basmati rice supplier",
+    "Alleppey green cardamom wholesale",
+    "Salem turmeric fingers bulk supplier",
+    "Guntur Teja red chilli export",
+    "pure mulberry silk stoles India",
+    "hand hammered copper drinkware manufacturer",
+    "APEDA registered merchant exporter",
+    "FIEO certified trade house India",
+    "FCL container CIF pricing India",
+    "B2B Indian spices export",
+    "agricultural commodities exporter Mumbai",
+    "Indian textiles supplier wholesale"
+  ],
+  authors: [{ name: 'IPM Exim Global Trade House', url: SITE_URL }],
+  creator: 'IPM Exim',
+  publisher: 'IPM Exim',
+  formatDetection: {
+    email: true,
+    address: true,
+    telephone: true,
+  },
+  openGraph: {
+    title: "IPM Exim — Luxury Global Export-Import & Sourcing",
+    description: "Connecting Global Markets. Delivering Quality from India. Verified B2B export commodities, high-aroma spices, Basmati rice, luxury textiles, and copperware.",
+    url: SITE_URL,
+    siteName: "IPM Exim Global Trade House",
+    images: [
+      {
+        url: "/images/hero_global_trade_1793609365586.jpg",
+        width: 1200,
+        height: 630,
+        alt: "IPM Exim Maritime Cargo & Global Trade Operations",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "IPM Exim — Luxury Global Export-Import & Sourcing",
+    description: "Connecting Global Markets. Delivering Quality from India. Verified B2B export commodities, high-aroma spices, Basmati rice, and luxury textiles.",
+    images: ["/images/hero_global_trade_1793609365586.jpg"],
+    creator: "@ipmexim",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  alternates: {
+    canonical: '/',
+    languages: {
+      'en-US': '/',
+      'ar-AE': '/?lang=ar',
+      'es-ES': '/?lang=es',
+      'fr-FR': '/?lang=fr',
+      'de-DE': '/?lang=de',
+      'zh-CN': '/?lang=zh',
+      'ja-JP': '/?lang=ja',
+      'ru-RU': '/?lang=ru',
+    },
+  },
+  category: "International Trade & Commercial Export Sourcing",
   icons: {
-    icon: "/logo.png",
+    icon: [
+      { url: "/logo.png", type: "image/png" },
+      { url: "/favicon.ico", sizes: "48x48" },
+    ],
     shortcut: "/logo.png",
     apple: "/logo.png",
   },
@@ -104,6 +196,9 @@ export default function RootLayout({
             `,
           }}
         />
+        <OrganizationJsonLd />
+        <WebSiteJsonLd />
+        <FaqJsonLd />
       </head>
       <body className="min-h-screen flex flex-col antialiased transition-colors" suppressHydrationWarning>
         <ThemeProvider>
