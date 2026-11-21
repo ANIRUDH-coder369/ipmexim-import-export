@@ -30,20 +30,8 @@ const sanitizeInputMiddleware = (req, res, next) => {
  * Enhanced Helmet Security Headers
  */
 const helmetMiddleware = helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'", 'https:', 'data:'],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"]
-    }
-  },
-  crossOriginEmbedderPolicy: false, // Allows cross-origin asset loading
+  contentSecurityPolicy: false, // Disabled for pure REST API to prevent CORS & header conflicts
+  crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   dnsPrefetchControl: { allow: false },
   frameguard: { action: 'deny' },
@@ -56,28 +44,26 @@ const helmetMiddleware = helmet({
 });
 
 /**
- * CORS Configuration supporting local frontend and production domains
+ * Universal CORS Configuration supporting localhost, Vercel, and production domains
  */
 const getCorsOptions = () => {
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:3001',
-    process.env.CLIENT_URL,
-    process.env.FRONTEND_URL
-  ].filter(Boolean);
-
   return {
     origin: function (origin, callback) {
-      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(null, true); // Fallback to allow during development
-      }
+      // Dynamic origin reflection: echoes incoming Origin so credentials: true works seamlessly
+      callback(null, true);
     },
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders: [
+      'Origin',
+      'X-Requested-With',
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'Cache-Control',
+      'Pragma',
+      'X-Access-Token'
+    ],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
     credentials: true,
     maxAge: 86400 // 24 hours preflight cache
   };

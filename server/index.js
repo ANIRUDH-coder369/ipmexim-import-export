@@ -17,14 +17,16 @@ const Admin = require('./models/Admin');
 
 const app = express();
 
-// Disable technology fingerprinting
+// 1. CORS Middleware & Global Preflight Handler (Mounted first to handle all origins & OPTIONS requests)
+const corsOptions = getCorsOptions();
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
+
+// 2. Disable technology fingerprinting
 app.disable('x-powered-by');
 
-// Security HTTP Headers (Helmet: CSP, HSTS, X-Frame-Options, X-Content-Type-Options)
+// 3. Security HTTP Headers (Helmet)
 app.use(helmetMiddleware);
-
-// CORS Middleware with Origin Whitelist
-app.use(cors(getCorsOptions()));
 
 // Body Parser Middleware with strict payload limits (prevents payload attacks)
 app.use(express.json({ limit: '1mb' }));
