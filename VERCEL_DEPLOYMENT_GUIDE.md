@@ -39,9 +39,9 @@ In the Vercel project configuration screen, go to **Environment Variables** and 
 | `NOTIFICATION_EMAIL` | `ipmexim@gmail.com` | Destination inbox for new quotations |
 | `SMTP_HOST` | `smtp.gmail.com` | SMTP Mail Server |
 | `SMTP_PORT` | `587` | SMTP Port |
-| `SMTP_USER` | `kotambeharsh@gmail.com` | Official Gmail dispatch user |
-| `SMTP_PASS` | `zytscfewkjyclptj` | Gmail App Password |
-| `EMAIL_FROM` | `"IPM Exim" <kotambeharsh@gmail.com>` | Official sender header |
+| `SMTP_USER` | `ipmexim@gmail.com` | Official Gmail dispatch user |
+| `SMTP_PASS` | `ephajflwefjnokyu` | Gmail App Password |
+| `EMAIL_FROM` | `"IPM Exim" <ipmexim@gmail.com>` | Official sender header |
 | `NEXT_PUBLIC_API_URL` | *(Optional)* | Leave blank to use built-in serverless `/api` routes! Or set to external Express URL if hosted separately. |
 
 ---
