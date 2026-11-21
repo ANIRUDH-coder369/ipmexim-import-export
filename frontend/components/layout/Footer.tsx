@@ -31,23 +31,23 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-8 mb-16">
           {/* Brand Info & Mission */}
           <div className="lg:col-span-2 space-y-5">
-            <Link href="/" className="inline-flex items-center gap-3.5 group">
-              <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-white/5 p-1 border border-white/10 group-hover:border-[#D4AF69]/40 transition-colors">
+            <Link href="/" className="inline-flex items-center gap-4 group">
+              <div className="flex items-center justify-center h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-white/5 p-2 border border-white/10 group-hover:border-[#D4AF69]/50 transition-all shadow-md">
                 <img
                   src="/logo.png"
                   alt="IPM Exim Global"
-                  className="h-full w-full object-contain filter drop-shadow-sm group-hover:scale-105 transition-transform"
+                  className="h-full w-full object-contain filter drop-shadow-md group-hover:scale-105 transition-transform"
                 />
               </div>
               <div>
                 <span
-                  className="font-serif text-2xl lg:text-3xl font-normal tracking-tight block"
+                  className="font-serif text-2xl sm:text-3xl lg:text-4xl font-normal tracking-tight block"
                   style={{ color: 'var(--text-primary)' }}
                 >
                   IPM Exim
                 </span>
                 <span
-                  className="block text-[10px] uppercase tracking-[0.22em] font-sans font-bold"
+                  className="block text-[11px] sm:text-xs uppercase tracking-[0.22em] font-sans font-bold mt-1"
                   style={{ color: 'var(--gold)' }}
                 >
                   International Trade &bull; India Origin Gateway
