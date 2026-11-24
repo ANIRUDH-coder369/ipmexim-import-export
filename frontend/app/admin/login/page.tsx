@@ -3,13 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ShieldCheck, Lock, Mail, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
+import { Lock, Mail, ArrowRight, AlertCircle } from 'lucide-react';
 import { getApiUrl } from '@/utils/apiConfig';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@importexport.com');
-  const [password, setPassword] = useState('Admin@12345');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,7 +18,9 @@ export default function AdminLoginPage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('unauthorized') === 'true') {
-        setError('Access Denied. You must log in with authorized credentials to view the admin dashboard.');
+        setTimeout(() => {
+          setError('Access Denied. You must log in with authorized credentials to view the admin dashboard.');
+        }, 0);
       }
     }
   }, []);
@@ -66,16 +68,10 @@ export default function AdminLoginPage() {
         router.replace('/admin');
         return;
       }
-      setError('Unable to connect to authentication server. Please verify backend is running on port 5000.');
+      setError('Unable to connect to authentication server. Please verify backend is running.');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const fillDefaultCredentials = () => {
-    setEmail('admin@importexport.com');
-    setPassword('Admin@12345');
-    setError(null);
   };
 
   return (
@@ -127,7 +123,7 @@ export default function AdminLoginPage() {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="space-y-4 text-xs" autoComplete="off">
           <div>
             <label className="block font-semibold mb-1" style={{ color: 'var(--gold)' }}>
               Administrative Email
@@ -138,7 +134,8 @@ export default function AdminLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="admin@importexport.com"
+                placeholder="Enter administrative email"
+                autoComplete="off"
                 className="input-luxury"
               />
               <Mail className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 opacity-40 pointer-events-none" />
@@ -155,7 +152,8 @@ export default function AdminLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="••••••••••••"
+                placeholder="Enter security key / password"
+                autoComplete="current-password"
                 className="input-luxury"
               />
               <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 opacity-40 pointer-events-none" />
@@ -180,28 +178,7 @@ export default function AdminLoginPage() {
           </div>
         </form>
 
-        {/* Helper Seed Hint */}
-        <div 
-          className="mt-6 pt-5 border-t text-center text-[11px] space-y-2"
-          style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}
-        >
-          <div className="flex items-center justify-between">
-            <span>Default Seed Credentials:</span>
-            <button
-              type="button"
-              onClick={fillDefaultCredentials}
-              className="text-[10px] uppercase font-semibold tracking-wider hover:underline"
-              style={{ color: 'var(--gold)' }}
-            >
-              Auto-Fill Demo
-            </button>
-          </div>
-          <p className="font-mono text-[10px] text-left p-2 rounded bg-black/20 border border-white/5">
-            admin@importexport.com / Admin@12345
-          </p>
-        </div>
-
-        <div className="mt-6 text-center">
+        <div className="mt-8 pt-5 border-t text-center" style={{ borderColor: 'var(--border-subtle)' }}>
           <Link
             href="/"
             className="text-xs transition-colors hover:underline"
