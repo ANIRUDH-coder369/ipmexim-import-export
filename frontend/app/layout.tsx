@@ -191,6 +191,8 @@ export default function RootLayout({
 
               window.googleTranslateElementInit = function() {
                 try {
+                  var currentLang = localStorage.getItem('ipm_lang') || 'en';
+                  if (currentLang === 'en') return;
                   if (window.google && window.google.translate && window.google.translate.TranslateElement) {
                     new window.google.translate.TranslateElement({
                       pageLanguage: 'en',

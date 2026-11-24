@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import Script from 'next/script';
+import { useLanguage } from '@/context/LanguageContext';
 
 declare global {
   interface Window {
@@ -11,7 +12,43 @@ declare global {
 }
 
 export const GoogleTranslateEngine: React.FC = () => {
+  const { language } = useLanguage();
+
   useEffect(() => {
+    // If language is English, proactively purge any Google Translate cookies, classes, and elements
+    if (language === 'en') {
+      const clearCookies = () => {
+        if (typeof window === 'undefined') return;
+        const host = window.location.hostname;
+        const parts = host.split('.');
+        const domains = ['', host, `.${host}`];
+        if (parts.length > 2) {
+          const parent = parts.slice(1).join('.');
+          domains.push(parent, `.${parent}`);
+        }
+        const paths = ['/', '', window.location.pathname];
+        domains.forEach((d) => {
+          paths.forEach((p) => {
+            document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; ${d ? `domain=${d};` : ''} path=${p};`;
+          });
+        });
+      };
+      clearCookies();
+
+      if (typeof document !== 'undefined') {
+        document.documentElement.classList.remove('translated-ltr', 'translated-rtl');
+        const iframes = document.querySelectorAll(
+          'iframe.skiptranslate, iframe.goog-te-banner-frame, iframe[class*="skiptranslate"], .goog-te-banner-frame'
+        );
+        iframes.forEach((el) => {
+          (el as HTMLElement).style.setProperty('display', 'none', 'important');
+        });
+        document.body.style.setProperty('top', '0px', 'important');
+        document.body.style.setProperty('position', 'static', 'important');
+      }
+      return;
+    }
+
     // 1. Define the global callback for Google Translate
     window.googleTranslateElementInit = () => {
       try {
@@ -32,7 +69,6 @@ export const GoogleTranslateEngine: React.FC = () => {
 
     // 2. Continuous banner suppressor using MutationObserver
     const suppressGoogleBanner = () => {
-      // Find any iframe added by Google Translate
       const iframes = document.querySelectorAll(
         'iframe.skiptranslate, iframe.goog-te-banner-frame, iframe[class*="skiptranslate"], .goog-te-banner-frame'
       );
@@ -46,7 +82,6 @@ export const GoogleTranslateEngine: React.FC = () => {
         htmlEl.style.setProperty('pointer-events', 'none', 'important');
       });
 
-      // Prevent body pushdown
       if (document.body.style.top && document.body.style.top !== '0px') {
         document.body.style.setProperty('top', '0px', 'important');
       }
@@ -55,10 +90,8 @@ export const GoogleTranslateEngine: React.FC = () => {
       }
     };
 
-    // Run immediately
     suppressGoogleBanner();
 
-    // Observe any DOM mutations to kill the banner as soon as Google injects it
     const observer = new MutationObserver(() => {
       suppressGoogleBanner();
     });
@@ -73,7 +106,13 @@ export const GoogleTranslateEngine: React.FC = () => {
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [language]);
+
+  // If language is English, do NOT load Google Translate script or DOM element!
+  // This completely stops Google Translate from mutating English into Italian or any other language!
+  if (language === 'en') {
+    return null;
+  }
 
   return (
     <>

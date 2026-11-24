@@ -36,16 +36,21 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const clearGoogleTransCookies = () => {
     if (typeof window === 'undefined') return;
     const hostname = window.location.hostname;
-    const isLocal = !hostname || hostname === 'localhost' || hostname === '127.0.0.1';
-
-    // Clear old cookies across all domains and paths
+    const parts = hostname.split('.');
     const domains = ['', hostname, `.${hostname}`];
-    const paths = ['/', ''];
+    if (parts.length > 2) {
+      const parent = parts.slice(1).join('.');
+      domains.push(parent, `.${parent}`);
+    }
+    const paths = ['/', '', window.location.pathname];
     domains.forEach((d) => {
       paths.forEach((p) => {
-        document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; ${d && !isLocal ? `domain=${d};` : ''} path=${p};`;
+        document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; ${d ? `domain=${d};` : ''} path=${p};`;
       });
     });
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.remove('translated-ltr', 'translated-rtl');
+    }
   };
 
   useEffect(() => {
@@ -165,6 +170,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const setLanguage = (langCode: string) => {
+    const prevLang = language;
     setLanguageState(langCode);
     try {
       localStorage.setItem('ipm_lang', langCode);
@@ -178,6 +184,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (combo) {
         combo.value = '';
         combo.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      if (prevLang !== 'en') {
+        window.location.reload();
       }
     } else {
       triggerGoogleTranslate(langCode);
