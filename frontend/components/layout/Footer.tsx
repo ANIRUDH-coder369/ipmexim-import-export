@@ -79,13 +79,13 @@ export const Footer: React.FC = () => {
               </div>
             </div>
 
-            {/* Live Web Gateways */}
+            {/* Official Web Gateway */}
             <div className="pt-2 space-y-1.5 text-xs">
               <span
                 className="block text-[11px] uppercase tracking-wider font-semibold"
                 style={{ color: 'var(--gold)' }}
               >
-                Official Commercial Web Gateways
+                Official Web Portal
               </span>
               <div className="flex flex-col gap-1.5 text-[11px]">
                 <a
@@ -96,32 +96,7 @@ export const Footer: React.FC = () => {
                   style={{ color: 'var(--text-primary)' }}
                 >
                   <span className="w-2 h-2 rounded-full bg-[#10B981] inline-block shrink-0 shadow-[0_0_8px_#10B981]" />
-                  <span className="font-semibold">www.ipmexim.com</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#D4AF69]/20 text-[#D4AF69] uppercase tracking-wider font-sans ml-1">
-                    Official Domain
-                  </span>
-                  <ExternalLink className="w-3 h-3 text-[#10B981]" />
-                </a>
-                <a
-                  href="https://ipmexim-import-export-frontend.vercel.app/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 hover:text-gold-champagne hover:underline transition-colors font-mono opacity-80 hover:opacity-100"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  <span className="w-2 h-2 rounded-full bg-[#10B981]/70 inline-block shrink-0" />
-                  <span>ipmexim-import-export-frontend.vercel.app</span>
-                  <ExternalLink className="w-3 h-3 text-[#10B981]" />
-                </a>
-                <a
-                  href="https://ipmexim-import-export.vercel.app/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 hover:text-gold-champagne hover:underline transition-colors font-mono opacity-80 hover:opacity-100"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  <span className="w-2 h-2 rounded-full bg-[#10B981]/70 inline-block shrink-0" />
-                  <span>ipmexim-import-export.vercel.app</span>
+                  <span className="font-semibold text-xs">www.ipmexim.com</span>
                   <ExternalLink className="w-3 h-3 text-[#10B981]" />
                 </a>
               </div>
