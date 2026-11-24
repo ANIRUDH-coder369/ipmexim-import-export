@@ -166,17 +166,22 @@ export default function RootLayout({
                   document.documentElement.classList.add(t);
                   document.documentElement.setAttribute('data-theme', t);
 
-                  var savedLang = localStorage.getItem('ipm_lang');
-                  if (savedLang) {
-                    document.documentElement.lang = savedLang;
-                    var rtlLangs = ['ar', 'he', 'fa', 'ur', 'ps', 'sd', 'ug', 'yi', 'ckb', 'dv'];
-                    var isRtl = rtlLangs.indexOf(savedLang) !== -1;
-                    document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
-                    if (isRtl) {
-                      document.documentElement.classList.add('rtl');
-                    } else {
-                      document.documentElement.classList.remove('rtl');
-                    }
+                  var savedLang = localStorage.getItem('ipm_lang') || 'en';
+                  document.documentElement.lang = savedLang;
+                  var rtlLangs = ['ar', 'he', 'fa', 'ur', 'ps', 'sd', 'ug', 'yi', 'ckb', 'dv'];
+                  var isRtl = rtlLangs.indexOf(savedLang) !== -1;
+                  document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
+                  if (isRtl) {
+                    document.documentElement.classList.add('rtl');
+                  } else {
+                    document.documentElement.classList.remove('rtl');
+                  }
+                  if (savedLang === 'en') {
+                    document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                    try {
+                      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=" + window.location.hostname + "; path=/;";
+                      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=." + window.location.hostname + "; path=/;";
+                    } catch (e) {}
                   }
                 } catch (e) {
                   document.documentElement.classList.add('dark');

@@ -33,17 +33,49 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [language, setLanguageState] = useState<string>('en');
   const [mounted, setMounted] = useState(false);
 
+  const clearGoogleTransCookies = () => {
+    if (typeof window === 'undefined') return;
+    const hostname = window.location.hostname;
+    const isLocal = !hostname || hostname === 'localhost' || hostname === '127.0.0.1';
+
+    // Clear old cookies across all domains and paths
+    const domains = ['', hostname, `.${hostname}`];
+    const paths = ['/', ''];
+    domains.forEach((d) => {
+      paths.forEach((p) => {
+        document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; ${d && !isLocal ? `domain=${d};` : ''} path=${p};`;
+      });
+    });
+  };
+
   useEffect(() => {
     try {
+      // Default to English ('en') on first load
+      let activeLang = 'en';
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const urlLang = urlParams?.get('lang');
       const savedLang = localStorage.getItem('ipm_lang');
-      if (savedLang) {
-        setLanguageState(savedLang);
-        applyLanguageToDom(savedLang);
+
+      if (urlLang) {
+        activeLang = urlLang;
+      } else if (savedLang) {
+        activeLang = savedLang;
       } else {
-        applyLanguageToDom('en');
+        // Explicitly set default English in storage
+        localStorage.setItem('ipm_lang', 'en');
+      }
+
+      setLanguageState(activeLang);
+      applyLanguageToDom(activeLang);
+
+      if (activeLang === 'en') {
+        clearGoogleTransCookies();
+      } else {
+        setGoogleTransCookie(activeLang);
       }
     } catch {
       applyLanguageToDom('en');
+      clearGoogleTransCookies();
     }
     setMounted(true);
   }, []);
@@ -66,14 +98,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const hostname = window.location.hostname;
     const isLocal = !hostname || hostname === 'localhost' || hostname === '127.0.0.1';
 
-    // Clear old cookies across all domains and paths
-    const domains = ['', hostname, `.${hostname}`];
-    const paths = ['/', ''];
-    domains.forEach((d) => {
-      paths.forEach((p) => {
-        document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; ${d && !isLocal ? `domain=${d};` : ''} path=${p};`;
-      });
-    });
+    clearGoogleTransCookies();
 
     if (langCode !== 'en') {
       const gtCode = toGoogleTranslateCode(langCode);
@@ -89,6 +114,16 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const triggerGoogleTranslate = (langCode: string) => {
     if (typeof window === 'undefined') return;
 
+    if (langCode === 'en') {
+      clearGoogleTransCookies();
+      const combo = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
+      if (combo) {
+        combo.value = '';
+        combo.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      return;
+    }
+
     // 1. Persist Google Translate cookies
     setGoogleTransCookie(langCode);
 
@@ -96,28 +131,23 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const combo = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
 
     if (combo) {
-      if (langCode === 'en') {
-        combo.value = '';
-        combo.dispatchEvent(new Event('change', { bubbles: true }));
-      } else {
-        let matched = false;
-        for (let i = 0; i < combo.options.length; i++) {
-          const optVal = combo.options[i].value;
-          if (
-            optVal.toLowerCase() === gtCode.toLowerCase() ||
-            optVal.toLowerCase() === langCode.toLowerCase()
-          ) {
-            combo.selectedIndex = i;
-            combo.value = optVal;
-            combo.dispatchEvent(new Event('change', { bubbles: true }));
-            matched = true;
-            break;
-          }
-        }
-        if (!matched) {
-          combo.value = gtCode;
+      let matched = false;
+      for (let i = 0; i < combo.options.length; i++) {
+        const optVal = combo.options[i].value;
+        if (
+          optVal.toLowerCase() === gtCode.toLowerCase() ||
+          optVal.toLowerCase() === langCode.toLowerCase()
+        ) {
+          combo.selectedIndex = i;
+          combo.value = optVal;
           combo.dispatchEvent(new Event('change', { bubbles: true }));
+          matched = true;
+          break;
         }
+      }
+      if (!matched) {
+        combo.value = gtCode;
+        combo.dispatchEvent(new Event('change', { bubbles: true }));
       }
     }
 
@@ -142,7 +172,16 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Ignore local storage error
     }
     applyLanguageToDom(langCode);
-    triggerGoogleTranslate(langCode);
+    if (langCode === 'en') {
+      clearGoogleTransCookies();
+      const combo = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
+      if (combo) {
+        combo.value = '';
+        combo.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    } else {
+      triggerGoogleTranslate(langCode);
+    }
   };
 
   const t = (path: string, params?: Record<string, string>): string => {
