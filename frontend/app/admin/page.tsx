@@ -41,6 +41,12 @@ import {
   Calendar,
   Play,
   ArrowRight,
+  Download,
+  Printer,
+  ChevronLeft,
+  FileSpreadsheet,
+  FileCheck,
+  Maximize2,
 } from 'lucide-react';
 import { getApiUrl } from '@/utils/apiConfig';
 import { ProductItem } from '@/store/slices/productSlice';
@@ -230,8 +236,8 @@ export default function AdminDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
   
-  // Navigation Tabs: 'quotations' | 'products' | 'productLines' | 'shipments'
-  const [activeAdminTab, setActiveAdminTab] = useState<'quotations' | 'products' | 'productLines' | 'shipments'>('quotations');
+  // Navigation Tabs: 'quotations' | 'products' | 'productLines' | 'shipments' | 'monthlyReport'
+  const [activeAdminTab, setActiveAdminTab] = useState<'quotations' | 'products' | 'productLines' | 'shipments' | 'monthlyReport'>('quotations');
 
   // Quotation Management State
   const [quotations, setQuotations] = useState<QuotationEntry[]>([]);
@@ -310,6 +316,415 @@ export default function AdminDashboardPage() {
   const [isSavingShipment, setIsSavingShipment] = useState(false);
   const [shipNotice, setShipNotice] = useState<string | null>(null);
   const [shipError, setShipError] = useState<string | null>(null);
+
+  // Monthly Quotation Sheet & PDF Export State
+  const [selectedReportYear, setSelectedReportYear] = useState<number>(new Date().getFullYear());
+  const [selectedReportMonth, setSelectedReportMonth] = useState<number>(new Date().getMonth()); // 0-indexed (10 = November)
+  const [monthlyStatusFilter, setMonthlyStatusFilter] = useState<string>('All');
+  const [monthlySearchQuery, setMonthlySearchQuery] = useState<string>('');
+  const [isPdfPlanModeOpen, setIsPdfPlanModeOpen] = useState<boolean>(false);
+
+  const MONTH_NAMES = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  // Filter quotations matching the selected month and year
+  const monthlyQuotations = useMemo(() => {
+    return quotations.filter((q) => {
+      if (!q.createdAt) return false;
+      const d = new Date(q.createdAt);
+      if (isNaN(d.getTime())) return false;
+      return d.getFullYear() === selectedReportYear && d.getMonth() === selectedReportMonth;
+    });
+  }, [quotations, selectedReportYear, selectedReportMonth]);
+
+  // Further filter by status and search query for display
+  const displayedMonthlyQuotations = useMemo(() => {
+    return monthlyQuotations.filter((q) => {
+      if (monthlyStatusFilter !== 'All' && q.status !== monthlyStatusFilter) {
+        return false;
+      }
+      if (monthlySearchQuery.trim()) {
+        const qLower = monthlySearchQuery.toLowerCase();
+        const matchName = q.fullName?.toLowerCase().includes(qLower);
+        const matchEmail = (q.corporateEmail || q.businessEmail || '')?.toLowerCase().includes(qLower);
+        const matchCompany = (q.companyName || q.company || '')?.toLowerCase().includes(qLower);
+        const matchProduct = (q.productOfInterest || q.productName || '')?.toLowerCase().includes(qLower);
+        const matchCountry = (q.destinationCountry || q.country || '')?.toLowerCase().includes(qLower);
+        const matchPhone = (q.phoneWhatsApp || q.phone || '')?.toLowerCase().includes(qLower);
+        const matchId = (q._id || q.id || '')?.toLowerCase().includes(qLower);
+        return matchName || matchEmail || matchCompany || matchProduct || matchCountry || matchPhone || matchId;
+      }
+      return true;
+    });
+  }, [monthlyQuotations, monthlyStatusFilter, monthlySearchQuery]);
+
+  // Monthly KPI and summary analytics
+  const monthlyStats = useMemo(() => {
+    const total = monthlyQuotations.length;
+    const pending = monthlyQuotations.filter(q => q.status === 'Pending').length;
+    const quoted = monthlyQuotations.filter(q => q.status === 'Quoted').length;
+    const contacted = monthlyQuotations.filter(q => q.status === 'Contacted').length;
+    const closed = monthlyQuotations.filter(q => q.status === 'Closed').length;
+    const reviewed = monthlyQuotations.filter(q => q.status === 'Reviewed').length;
+
+    const countryCounts: Record<string, number> = {};
+    monthlyQuotations.forEach(q => {
+      const c = q.destinationCountry || q.country || 'International';
+      countryCounts[c] = (countryCounts[c] || 0) + 1;
+    });
+    const topCountries = Object.entries(countryCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+
+    const productCounts: Record<string, number> = {};
+    monthlyQuotations.forEach(q => {
+      const p = q.productOfInterest || q.productName || 'General Export';
+      productCounts[p] = (productCounts[p] || 0) + 1;
+    });
+    const topProducts = Object.entries(productCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+
+    return { total, pending, quoted, contacted, closed, reviewed, topCountries, topProducts };
+  }, [monthlyQuotations]);
+
+  // Available years dynamically populated from quotation history
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    years.add(new Date().getFullYear());
+    quotations.forEach(q => {
+      if (q.createdAt) {
+        const y = new Date(q.createdAt).getFullYear();
+        if (!isNaN(y)) years.add(y);
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [quotations]);
+
+  const handlePrevMonth = () => {
+    if (selectedReportMonth === 0) {
+      setSelectedReportMonth(11);
+      setSelectedReportYear(prev => prev - 1);
+    } else {
+      setSelectedReportMonth(prev => prev - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (selectedReportMonth === 11) {
+      setSelectedReportMonth(0);
+      setSelectedReportYear(prev => prev + 1);
+    } else {
+      setSelectedReportMonth(prev => prev + 1);
+    }
+  };
+
+  const handleCurrentMonth = () => {
+    const now = new Date();
+    setSelectedReportYear(now.getFullYear());
+    setSelectedReportMonth(now.getMonth());
+  };
+
+  // Generate Executive A4 Landscape Printable PDF Report
+  const generateMonthlyPdfPrint = () => {
+    const monthName = MONTH_NAMES[selectedReportMonth];
+    const year = selectedReportYear;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow popups to open and print the monthly PDF report.');
+      return;
+    }
+
+    const tableRowsHtml = displayedMonthlyQuotations.map((q, idx) => {
+      const dateStr = q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+      const refId = q._id ? `#${q._id.slice(-6).toUpperCase()}` : (q.id ? `#${q.id}` : `#REF-${idx + 1}`);
+      const clientName = q.fullName || 'Unspecified';
+      const company = q.companyName || q.company || 'Private Buyer';
+      const email = q.corporateEmail || q.businessEmail || 'N/A';
+      const phone = q.phoneWhatsApp || q.phone || 'N/A';
+      const country = q.destinationCountry || q.country || 'Global';
+      const port = q.destinationPort || 'Direct Discharge';
+      const product = q.productOfInterest || q.productName || 'Export Commodity';
+      const quantity = q.quantity || q.estimatedQuantity || 'To Be Specified';
+      const specs = q.technicalSpecifications || q.message || 'Standard Commercial Grade';
+      
+      let statusColor = '#3b82f6';
+      let statusBg = '#eff6ff';
+      if (q.status === 'Quoted') { statusColor = '#059669'; statusBg = '#ecfdf5'; }
+      else if (q.status === 'Pending') { statusColor = '#d97706'; statusBg = '#fffbeb'; }
+      else if (q.status === 'Contacted') { statusColor = '#7c3aed'; statusBg = '#f5f3ff'; }
+      else if (q.status === 'Closed') { statusColor = '#475569'; statusBg = '#f1f5f9'; }
+
+      return `
+        <tr style="border-bottom: 1px solid #e2e8f0; font-size: 8pt;">
+          <td style="padding: 6px 4px; font-weight: 700; font-family: monospace; color: #1e293b;">${refId}</td>
+          <td style="padding: 6px 4px; color: #475569; white-space: nowrap;">${dateStr}</td>
+          <td style="padding: 6px 4px;">
+            <div style="font-weight: 700; color: #0f172a;">${clientName}</div>
+            <div style="font-size: 7.5pt; color: #64748b;">${company}</div>
+          </td>
+          <td style="padding: 6px 4px;">
+            <div style="color: #2563eb;">${email}</div>
+            <div style="font-size: 7.5pt; color: #475569;">${phone}</div>
+          </td>
+          <td style="padding: 6px 4px;">
+            <div style="font-weight: 600; color: #0f172a;">${country}</div>
+            <div style="font-size: 7.5pt; color: #64748b;">Port: ${port}</div>
+          </td>
+          <td style="padding: 6px 4px; font-weight: 600; color: #0f172a;">${product}</td>
+          <td style="padding: 6px 4px; color: #0f172a; white-space: nowrap;">${quantity}</td>
+          <td style="padding: 6px 4px; max-width: 180px; color: #334155; font-size: 7.5pt; line-height: 1.2;">${specs}</td>
+          <td style="padding: 6px 4px; text-align: center;">
+            <span style="display: inline-block; padding: 2px 6px; font-size: 7pt; font-weight: 700; border-radius: 4px; color: ${statusColor}; background: ${statusBg}; border: 1px solid ${statusColor}40;">
+              ${q.status}
+            </span>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <title>IPM Exim — Commercial Quotations Report — ${monthName} ${year}</title>
+        <style>
+          @page {
+            size: A4 landscape;
+            margin: 10mm 8mm 12mm 8mm;
+          }
+          * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            color: #0f172a;
+            background: #ffffff;
+            font-size: 9pt;
+          }
+          .header-table {
+            width: 100%;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+          }
+          .kpi-container {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+          }
+          .kpi-box {
+            flex: 1;
+            padding: 8px 10px;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+          }
+          .kpi-title {
+            font-size: 7pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+          }
+          .kpi-value {
+            font-size: 13pt;
+            font-weight: 800;
+            color: #0f172a;
+            margin-top: 2px;
+          }
+          table.ledger-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+          }
+          table.ledger-table th {
+            background-color: #0f172a;
+            color: #ffffff;
+            font-size: 7.5pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 6px 4px;
+            text-align: left;
+          }
+          .footer-section {
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px solid #cbd5e1;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            font-size: 7.5pt;
+            color: #64748b;
+          }
+          .signature-box {
+            text-align: center;
+            width: 200px;
+          }
+          .signature-line {
+            border-bottom: 1px dashed #475569;
+            margin-bottom: 4px;
+            height: 35px;
+          }
+        </style>
+      </head>
+      <body>
+        <table class="header-table">
+          <tr>
+            <td style="vertical-align: middle;">
+              <div style="font-size: 16pt; font-weight: 900; letter-spacing: 1px; color: #0f172a;">IPM EXIM GLOBAL PRIVATE LIMITED</div>
+              <div style="font-size: 8pt; color: #475569; margin-top: 2px;">
+                Premier International Exporters of Rice, Spices, Agricultural Commodities & Industrial Goods
+              </div>
+              <div style="font-size: 7.5pt; color: #64748b; margin-top: 2px;">
+                IEC: 0524089912 &bull; GSTIN: 27AABCI1234F1Z9 &bull; APEDA & FIEO Recognized Export House
+              </div>
+            </td>
+            <td style="text-align: right; vertical-align: middle;">
+              <div style="display: inline-block; background: #0f172a; color: #f59e0b; padding: 4px 10px; border-radius: 4px; font-weight: 800; font-size: 10pt; letter-spacing: 0.5px;">
+                MONTHLY COMMERCIAL AUDIT
+              </div>
+              <div style="font-size: 11pt; font-weight: 800; color: #0f172a; margin-top: 4px;">
+                ${monthName.toUpperCase()} ${year}
+              </div>
+              <div style="font-size: 7.5pt; color: #64748b;">
+                Report Generated: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- KPI Summary Cards -->
+        <div class="kpi-container">
+          <div class="kpi-box">
+            <div class="kpi-title">Total Inquiries Received</div>
+            <div class="kpi-value">${monthlyStats.total} <span style="font-size: 8pt; font-weight: 400; color: #64748b;">Inquiries</span></div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-title">Quoted / Commercial Offers</div>
+            <div class="kpi-value" style="color: #059669;">${monthlyStats.quoted}</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-title">Active / In Dialogue</div>
+            <div class="kpi-value" style="color: #7c3aed;">${monthlyStats.contacted + monthlyStats.reviewed}</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-title">Pending Initial Review</div>
+            <div class="kpi-value" style="color: #d97706;">${monthlyStats.pending}</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-title">Top Export Destinations</div>
+            <div style="font-size: 8pt; font-weight: 700; color: #0f172a; margin-top: 3px;">
+              ${monthlyStats.topCountries.length > 0 ? monthlyStats.topCountries.map(c => `${c[0]} (${c[1]})`).join(', ') : 'Global Markets'}
+            </div>
+          </div>
+        </div>
+
+        <!-- Ledger Table -->
+        <table class="ledger-table">
+          <thead>
+            <tr>
+              <th style="width: 7%;">Ref ID</th>
+              <th style="width: 8%;">Date</th>
+              <th style="width: 15%;">Buyer / Company</th>
+              <th style="width: 16%;">Contact Information</th>
+              <th style="width: 13%;">Country & Port</th>
+              <th style="width: 13%;">Product</th>
+              <th style="width: 8%;">Quantity</th>
+              <th style="width: 14%;">Specifications / Notes</th>
+              <th style="width: 6%; text-align: center;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${displayedMonthlyQuotations.length > 0 ? tableRowsHtml : `
+              <tr>
+                <td colspan="9" style="text-align: center; padding: 25px; color: #64748b; font-style: italic;">
+                  No quotation entries recorded for ${monthName} ${year} matching criteria.
+                </td>
+              </tr>
+            `}
+          </tbody>
+        </table>
+
+        <!-- Sign-off Block -->
+        <div class="footer-section">
+          <div>
+            <div style="font-weight: 700; color: #0f172a;">IPM Exim Global Commercial Trade Desk</div>
+            <div>Official Portal: www.ipmexim.com | Trade Inbox: ipmexim@gmail.com | Phone: +91 98765 43210</div>
+            <div>Confidential Document: Intended solely for IPM Exim executive management and trade audit.</div>
+          </div>
+          <div class="signature-box">
+            <div class="signature-line"></div>
+            <div style="font-weight: 700; color: #0f172a;">Trade Desk Director</div>
+            <div>Authorized Commercial Signatory</div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 400);
+  };
+
+  // Download Monthly Quotations CSV
+  const downloadMonthlyCsv = () => {
+    const monthName = MONTH_NAMES[selectedReportMonth];
+    const year = selectedReportYear;
+    const headers = [
+      'Reference ID',
+      'Date & Time',
+      'Customer Full Name',
+      'Company Name',
+      'Corporate Email',
+      'Phone / WhatsApp',
+      'Destination Country',
+      'Destination Port',
+      'Product / Commodity',
+      'Quantity',
+      'Technical Specifications / Message',
+      'Status'
+    ];
+
+    const rows = displayedMonthlyQuotations.map(q => [
+      `"${(q._id || q.id || '').replace(/"/g, '""')}"`,
+      `"${q.createdAt ? new Date(q.createdAt).toLocaleString('en-US') : ''}"`,
+      `"${(q.fullName || '').replace(/"/g, '""')}"`,
+      `"${(q.companyName || q.company || 'N/A').replace(/"/g, '""')}"`,
+      `"${(q.corporateEmail || q.businessEmail || '').replace(/"/g, '""')}"`,
+      `"${(q.phoneWhatsApp || q.phone || 'N/A').replace(/"/g, '""')}"`,
+      `"${(q.destinationCountry || q.country || 'N/A').replace(/"/g, '""')}"`,
+      `"${(q.destinationPort || 'N/A').replace(/"/g, '""')}"`,
+      `"${(q.productOfInterest || q.productName || 'N/A').replace(/"/g, '""')}"`,
+      `"${(q.quantity || q.estimatedQuantity || 'N/A').replace(/"/g, '""')}"`,
+      `"${(q.technicalSpecifications || q.message || 'N/A').replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+      `"${q.status}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `IPM_Exim_Quotations_${monthName}_${year}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   // Strict Authentication Guard Check
   useEffect(() => {
@@ -1387,11 +1802,24 @@ export default function AdminDashboardPage() {
               <Navigation className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
               <span>Consignments &amp; Videos ({shipmentsList.length})</span>
             </button>
+
+            <button
+              onClick={() => setActiveAdminTab('monthlyReport')}
+              className={`flex items-center justify-center gap-2.5 sm:gap-3 px-4 sm:px-6 py-3 sm:py-3.5 rounded-xl border text-xs sm:text-base font-bold tracking-wide transition-all cursor-pointer min-h-[44px] ${
+                activeAdminTab === 'monthlyReport'
+                  ? 'btn-glass-morphism shadow-xl'
+                  : 'hover:border-gold-border/40'
+              }`}
+              style={activeAdminTab !== 'monthlyReport' ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)', color: 'var(--text-secondary)' } : {}}
+            >
+              <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+              <span>Monthly Sheet &amp; PDF ({monthlyQuotations.length})</span>
+            </button>
           </div>
 
           <button
             onClick={() => {
-              if (activeAdminTab === 'quotations') fetchQuotations();
+              if (activeAdminTab === 'quotations' || activeAdminTab === 'monthlyReport') fetchQuotations();
               else if (activeAdminTab === 'products') fetchProductsAdmin();
               else if (activeAdminTab === 'productLines') fetchProductLinesAdmin();
               else fetchShipmentsAdmin();
@@ -2261,6 +2689,418 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
+
+        {/* ========================================================
+            VIEW 5: MONTHLY SHEET, AUDIT LEDGER & PDF EXPORT
+            ======================================================== */}
+        {activeAdminTab === 'monthlyReport' && (
+          <div className="space-y-8 animate-fade-in">
+            {/* Top Month Navigation & Executive Action Header */}
+            <div 
+              className="p-6 sm:p-8 rounded-2xl border shadow-xl flex flex-col xl:flex-row xl:items-center justify-between gap-6"
+              style={{
+                backgroundColor: 'var(--bg-card)',
+                borderColor: 'var(--border-card)',
+              }}
+            >
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="badge-pill px-3 py-1 text-xs font-bold tracking-wider text-amber-400 bg-amber-400/10 border border-amber-400/30">
+                    Monthly Commercial Audit Ledger
+                  </span>
+                  <span className="text-xs text-muted-grey">
+                    Audit Period: {MONTH_NAMES[selectedReportMonth]} {selectedReportYear}
+                  </span>
+                </div>
+                <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+                  Monthly Quotation Sheet &amp; Customer Ledger
+                </h2>
+                <p className="text-sm mt-1 max-w-2xl text-muted-grey">
+                  Individual entry breakdown for all international buyer quotations received in {MONTH_NAMES[selectedReportMonth]} {selectedReportYear}. Generate certified A4 landscape executive PDF reports and audit spreadsheets.
+                </p>
+              </div>
+
+              {/* Month / Year Navigator Controls */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                <div className="flex items-center bg-black/40 border rounded-xl p-1" style={{ borderColor: 'var(--border-card)' }}>
+                  <button
+                    onClick={handlePrevMonth}
+                    title="Previous Month"
+                    className="p-2 rounded-lg hover:bg-white/10 text-muted-grey hover:text-white transition-colors cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  {/* Month Selector */}
+                  <select
+                    value={selectedReportMonth}
+                    onChange={(e) => setSelectedReportMonth(Number(e.target.value))}
+                    className="bg-transparent text-xs sm:text-sm font-bold px-2 py-1 outline-none cursor-pointer"
+                    style={{ color: 'var(--text-primary)' }}
+                  >
+                    {MONTH_NAMES.map((name, idx) => (
+                      <option key={name} value={idx} className="bg-slate-900 text-white">
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Year Selector */}
+                  <select
+                    value={selectedReportYear}
+                    onChange={(e) => setSelectedReportYear(Number(e.target.value))}
+                    className="bg-transparent text-xs sm:text-sm font-bold px-2 py-1 outline-none cursor-pointer border-l border-white/10"
+                    style={{ color: 'var(--gold)' }}
+                  >
+                    {availableYears.map((yr) => (
+                      <option key={yr} value={yr} className="bg-slate-900 text-white">
+                        {yr}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    onClick={handleNextMonth}
+                    title="Next Month"
+                    className="p-2 rounded-lg hover:bg-white/10 text-muted-grey hover:text-white transition-colors cursor-pointer"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={handleCurrentMonth}
+                  className="px-3 py-2 rounded-xl border text-xs font-bold uppercase tracking-wider text-muted-grey hover:text-white transition-colors cursor-pointer"
+                  style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
+                >
+                  Current Month
+                </button>
+
+                {/* PDF Plan Mode Button */}
+                <button
+                  onClick={() => setIsPdfPlanModeOpen(true)}
+                  className="px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-bold tracking-wide transition-all cursor-pointer inline-flex items-center gap-2 hover:border-amber-400/60"
+                  style={{
+                    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                    borderColor: 'rgba(245, 158, 11, 0.4)',
+                    color: '#fbbf24'
+                  }}
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>PDF Plan Mode</span>
+                </button>
+
+                {/* Download PDF Button */}
+                <button
+                  onClick={generateMonthlyPdfPrint}
+                  className="btn-glass-morphism px-4 py-2.5 text-xs sm:text-sm font-bold tracking-wide cursor-pointer inline-flex items-center gap-2 shadow-lg"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download PDF Report</span>
+                </button>
+
+                {/* Export CSV Button */}
+                <button
+                  onClick={downloadMonthlyCsv}
+                  className="px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-bold tracking-wide transition-colors cursor-pointer inline-flex items-center gap-2 text-emerald-400 hover:bg-emerald-500/10"
+                  style={{ borderColor: 'rgba(16, 185, 129, 0.3)' }}
+                  title="Export to CSV / Excel spreadsheet"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span className="hidden sm:inline">Export CSV</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Monthly KPI Overview Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div 
+                className="p-5 rounded-2xl border flex items-center justify-between"
+                style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
+              >
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-grey">Total Month Inquiries</span>
+                  <div className="text-2xl sm:text-3xl font-extrabold mt-1" style={{ color: 'var(--text-primary)' }}>
+                    {monthlyStats.total}
+                  </div>
+                  <span className="text-[11px] text-muted-grey">
+                    {monthlyQuotations.length} entries for {MONTH_NAMES[selectedReportMonth]}
+                  </span>
+                </div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                  <FileCheck className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div 
+                className="p-5 rounded-2xl border flex items-center justify-between"
+                style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
+              >
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-grey">Commercial Quotations Sent</span>
+                  <div className="text-2xl sm:text-3xl font-extrabold mt-1 text-emerald-400">
+                    {monthlyStats.quoted}
+                  </div>
+                  <span className="text-[11px] text-muted-grey">
+                    {monthlyStats.total > 0 ? `${Math.round((monthlyStats.quoted / monthlyStats.total) * 100)}% conversion rate` : 'No inquiries'}
+                  </span>
+                </div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div 
+                className="p-5 rounded-2xl border flex items-center justify-between"
+                style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
+              >
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-grey">Pending Review / Dialogue</span>
+                  <div className="text-2xl sm:text-3xl font-extrabold mt-1 text-amber-400">
+                    {monthlyStats.pending} <span className="text-xs font-normal text-muted-grey">/ {monthlyStats.contacted} in talks</span>
+                  </div>
+                  <span className="text-[11px] text-muted-grey">Requires trade desk action</span>
+                </div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                  <Clock className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div 
+                className="p-5 rounded-2xl border flex items-center justify-between"
+                style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
+              >
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-grey">Top Export Destinations</span>
+                  <div className="text-sm font-bold mt-1 text-cyan-400 truncate max-w-[170px]">
+                    {monthlyStats.topCountries.length > 0 ? monthlyStats.topCountries.map(c => c[0]).join(', ') : 'Global Markets'}
+                  </div>
+                  <span className="text-[11px] text-muted-grey">
+                    Top commodity: {monthlyStats.topProducts[0] ? monthlyStats.topProducts[0][0] : 'Rice & Spices'}
+                  </span>
+                </div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+                  <Globe className="w-6 h-6" />
+                </div>
+              </div>
+            </div>
+
+            {/* Search & Status Filter Bar */}
+            <div 
+              className="p-4 sm:p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4"
+              style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
+            >
+              {/* Search Field */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-grey" />
+                <input
+                  type="text"
+                  placeholder="Filter by buyer name, company, email, country, commodity..."
+                  value={monthlySearchQuery}
+                  onChange={(e) => setMonthlySearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs sm:text-sm bg-black/40 outline-none focus:border-amber-400 transition-colors"
+                  style={{ borderColor: 'var(--border-card)', color: 'var(--text-primary)' }}
+                />
+                {monthlySearchQuery && (
+                  <button
+                    onClick={() => setMonthlySearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-grey hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Status Filter Buttons */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {['All', 'Pending', 'Reviewed', 'Contacted', 'Quoted', 'Closed'].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setMonthlyStatusFilter(st)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      monthlyStatusFilter === st
+                        ? 'bg-amber-400 text-black shadow-md'
+                        : 'bg-black/30 text-muted-grey hover:text-white border border-white/5'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Monthly Customer Quotation Ledger Table */}
+            <div 
+              className="rounded-2xl border shadow-xl overflow-hidden"
+              style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
+            >
+              <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-card)' }}>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+                      Customer Quotation Ledger &bull; {MONTH_NAMES[selectedReportMonth]} {selectedReportYear}
+                    </h3>
+                    <p className="text-xs text-muted-grey">
+                      Showing {displayedMonthlyQuotations.length} of {monthlyQuotations.length} customer entries
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsPdfPlanModeOpen(true)}
+                    className="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Plan Mode Preview</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b bg-black/40 text-[11px] font-bold uppercase tracking-wider text-muted-grey" style={{ borderColor: 'var(--border-card)' }}>
+                      <th className="py-3 px-4">Ref ID &amp; Date</th>
+                      <th className="py-3 px-4">Customer Details</th>
+                      <th className="py-3 px-4">Contact Channels</th>
+                      <th className="py-3 px-4">Destination &amp; Port</th>
+                      <th className="py-3 px-4">Product &amp; Volume</th>
+                      <th className="py-3 px-4 max-w-[200px]">Technical Specifications</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y" style={{ borderColor: 'var(--border-subtle)' }}>
+                    {displayedMonthlyQuotations.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-12 text-center text-muted-grey">
+                          <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                          <p className="text-sm font-semibold">No customer quotation entries found for {MONTH_NAMES[selectedReportMonth]} {selectedReportYear}</p>
+                          <p className="text-xs text-muted-grey mt-1">Try switching to another month or clearing search filters.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      displayedMonthlyQuotations.map((q, idx) => {
+                        const dateFormatted = q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+                        const timeFormatted = q.createdAt ? new Date(q.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
+                        const refCode = q._id ? `#${q._id.slice(-6).toUpperCase()}` : (q.id ? `#${q.id}` : `#REC-${idx + 1}`);
+
+                        return (
+                          <tr key={q._id || q.id || idx} className="hover:bg-white/[0.02] transition-colors">
+                            {/* Ref & Date */}
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              <span className="font-mono font-bold text-amber-400 block">{refCode}</span>
+                              <span className="text-[11px] text-muted-grey">{dateFormatted}</span>
+                              <span className="text-[10px] text-muted-grey/70 block">{timeFormatted}</span>
+                            </td>
+
+                            {/* Customer Details */}
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
+                                <User className="w-3.5 h-3.5 text-muted-grey shrink-0" />
+                                <span>{q.fullName || 'Private Client'}</span>
+                              </div>
+                              <div className="text-[11px] text-muted-grey flex items-center gap-1.5 mt-0.5">
+                                <Building className="w-3.5 h-3.5 text-muted-grey shrink-0" />
+                                <span>{q.companyName || q.company || 'Enterprise Buyer'}</span>
+                              </div>
+                            </td>
+
+                            {/* Contact Channels */}
+                            <td className="py-3.5 px-4">
+                              <div className="text-cyan-400 flex items-center gap-1.5">
+                                <Mail className="w-3.5 h-3.5 shrink-0" />
+                                <span className="truncate max-w-[160px]">{q.corporateEmail || q.businessEmail || 'N/A'}</span>
+                              </div>
+                              <div className="text-[11px] text-muted-grey flex items-center gap-1.5 mt-0.5">
+                                <span className="font-mono">{q.phoneWhatsApp || q.phone || 'N/A'}</span>
+                              </div>
+                            </td>
+
+                            {/* Destination & Port */}
+                            <td className="py-3.5 px-4">
+                              <div className="font-semibold flex items-center gap-1" style={{ color: 'var(--text-primary)' }}>
+                                <MapPin className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                                <span>{q.destinationCountry || q.country || 'Global'}</span>
+                              </div>
+                              <div className="text-[11px] text-muted-grey flex items-center gap-1 mt-0.5">
+                                <Anchor className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                                <span>Port: {q.destinationPort || 'Direct Discharge'}</span>
+                              </div>
+                            </td>
+
+                            {/* Product & Volume */}
+                            <td className="py-3.5 px-4">
+                              <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                                {q.productOfInterest || q.productName || 'Export Commodity'}
+                              </div>
+                              <div className="text-[11px] text-amber-400 mt-0.5 font-medium">
+                                Qty: {q.quantity || q.estimatedQuantity || 'To Be Specified'}
+                              </div>
+                            </td>
+
+                            {/* Technical Specifications */}
+                            <td className="py-3.5 px-4 max-w-[200px]">
+                              <p className="line-clamp-2 text-[11px] text-muted-grey leading-relaxed">
+                                {q.technicalSpecifications || q.message || 'No additional technical notes provided.'}
+                              </p>
+                            </td>
+
+                            {/* Status */}
+                            <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                                q.status === 'Quoted'
+                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                  : q.status === 'Pending'
+                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                                  : q.status === 'Contacted'
+                                  ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+                                  : 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+                              }`}>
+                                {q.status}
+                              </span>
+                            </td>
+
+                            {/* Actions */}
+                            <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => setSelectedQuotation(q)}
+                                  title="View Full Inquiry Details"
+                                  className="p-1.5 rounded-lg border hover:border-amber-400 text-muted-grey hover:text-white transition-colors cursor-pointer"
+                                  style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedQuotation(q);
+                                    setEmailSubject(`IPM Exim Commercial Quotation — ${q.productOfInterest || q.productName || 'Export Inquiries'}`);
+                                    setEmailMessage(`Dear ${q.fullName},\n\nThank you for reaching out to IPM Exim Global regarding your requirement for ${q.productOfInterest || q.productName || 'our export products'}.\n\nWe have reviewed your inquiry and are pleased to provide you with our export terms and commercial quotation.\n\nBest regards,\nIPM Exim Global Trade Desk\nhttps://www.ipmexim.com`);
+                                    setIsEmailModalOpen(true);
+                                  }}
+                                  title="Reply via Email"
+                                  className="p-1.5 rounded-lg border hover:border-cyan-400 text-muted-grey hover:text-cyan-400 transition-colors cursor-pointer"
+                                  style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
+                                >
+                                  <Send className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* ========================================================
@@ -3106,6 +3946,205 @@ export default function AdminDashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: A4 PDF PLAN MODE PREVIEW
+          ======================================================== */}
+      {isPdfPlanModeOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(10px)' }}
+        >
+          <div 
+            className="relative w-full max-w-6xl my-6 rounded-2xl border shadow-2xl flex flex-col max-h-[95vh] overflow-hidden"
+            style={{
+              backgroundColor: 'var(--bg-card)',
+              borderColor: 'var(--border-card)',
+              color: 'var(--text-primary)',
+            }}
+          >
+            {/* Modal Executive Header Bar */}
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-black/50" style={{ borderColor: 'var(--border-card)' }}>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                  <Printer className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-serif text-lg sm:text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                      PDF Plan Mode &bull; {MONTH_NAMES[selectedReportMonth]} {selectedReportYear}
+                    </h3>
+                    <span className="badge-pill px-2.5 py-0.5 text-[10px] font-bold text-amber-400 bg-amber-400/10 border border-amber-400/30">
+                      A4 Landscape Format
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-grey">
+                    Executive print preview with official IPM Exim company seals, buyer rows, and commercial certification.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={generateMonthlyPdfPrint}
+                  className="btn-glass-morphism px-4 py-2 text-xs font-bold tracking-wider inline-flex items-center gap-2 cursor-pointer shadow-lg"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Print / Save as PDF</span>
+                </button>
+                <button
+                  onClick={downloadMonthlyCsv}
+                  className="px-3 py-2 rounded-xl border text-xs font-bold text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                  style={{ borderColor: 'rgba(16, 185, 129, 0.3)' }}
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span>Export CSV</span>
+                </button>
+                <button 
+                  onClick={() => setIsPdfPlanModeOpen(false)}
+                  className="p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer text-muted-grey hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable A4 Landscape Paper Simulation Canvas */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-neutral-950 flex justify-center">
+              <div 
+                className="w-full max-w-[1060px] bg-white text-slate-900 rounded-lg shadow-2xl p-8 border border-neutral-300 font-sans text-xs"
+                style={{ minHeight: '650px' }}
+              >
+                {/* Official Letterhead */}
+                <div className="flex items-start justify-between border-b-2 border-slate-900 pb-4 mb-5">
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-black tracking-wider text-slate-950">
+                      IPM EXIM GLOBAL PRIVATE LIMITED
+                    </h1>
+                    <p className="text-[11px] text-slate-600 font-medium mt-0.5">
+                      Premier International Exporters &bull; Rice, Spices, Agricultural Commodities &bull; ISO &amp; APEDA Certified
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      IEC: 0524089912 | GSTIN: 27AABCI1234F1Z9 | Trade Desk: ipmexim@gmail.com | Web: www.ipmexim.com
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-block px-3 py-1 bg-slate-900 text-amber-400 text-xs font-black uppercase tracking-wider rounded">
+                      Commercial Trade Audit
+                    </span>
+                    <h2 className="text-sm font-extrabold text-slate-950 mt-1">
+                      {MONTH_NAMES[selectedReportMonth].toUpperCase()} {selectedReportYear}
+                    </h2>
+                    <p className="text-[10px] text-slate-500">
+                      Audited on {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* KPI Overview Summary Strip */}
+                <div className="grid grid-cols-4 gap-3 mb-5">
+                  <div className="p-2.5 bg-slate-100 border border-slate-300 rounded">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block">Total Inquiries</span>
+                    <span className="text-base font-black text-slate-900">{monthlyStats.total}</span>
+                  </div>
+                  <div className="p-2.5 bg-emerald-50 border border-emerald-300 rounded">
+                    <span className="text-[10px] uppercase font-bold text-emerald-700 block">Offers Quoted</span>
+                    <span className="text-base font-black text-emerald-800">{monthlyStats.quoted}</span>
+                  </div>
+                  <div className="p-2.5 bg-purple-50 border border-purple-300 rounded">
+                    <span className="text-[10px] uppercase font-bold text-purple-700 block">In Negotiation</span>
+                    <span className="text-base font-black text-purple-800">{monthlyStats.contacted + monthlyStats.reviewed}</span>
+                  </div>
+                  <div className="p-2.5 bg-amber-50 border border-amber-300 rounded">
+                    <span className="text-[10px] uppercase font-bold text-amber-700 block">Pending Review</span>
+                    <span className="text-base font-black text-amber-800">{monthlyStats.pending}</span>
+                  </div>
+                </div>
+
+                {/* Simulated Ledger Table */}
+                <table className="w-full text-left border-collapse text-[10px] mb-6">
+                  <thead>
+                    <tr className="bg-slate-900 text-white uppercase font-bold text-[9px] tracking-wider">
+                      <th className="py-2 px-2 border border-slate-700">Ref ID</th>
+                      <th className="py-2 px-2 border border-slate-700">Date</th>
+                      <th className="py-2 px-2 border border-slate-700">Buyer / Enterprise</th>
+                      <th className="py-2 px-2 border border-slate-700">Contact</th>
+                      <th className="py-2 px-2 border border-slate-700">Destination Port</th>
+                      <th className="py-2 px-2 border border-slate-700">Product</th>
+                      <th className="py-2 px-2 border border-slate-700">Quantity</th>
+                      <th className="py-2 px-2 border border-slate-700">Requirements</th>
+                      <th className="py-2 px-2 border border-slate-700 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {displayedMonthlyQuotations.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="py-8 text-center text-slate-500 italic border border-slate-200">
+                          No quotation entries registered for {MONTH_NAMES[selectedReportMonth]} {selectedReportYear}.
+                        </td>
+                      </tr>
+                    ) : (
+                      displayedMonthlyQuotations.map((q, idx) => {
+                        const refCode = q._id ? `#${q._id.slice(-6).toUpperCase()}` : (q.id ? `#${q.id}` : `#${idx + 1}`);
+                        const dateStr = q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'N/A';
+                        return (
+                          <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
+                            <td className="py-1.5 px-2 font-mono font-bold text-slate-900 border border-slate-200">{refCode}</td>
+                            <td className="py-1.5 px-2 text-slate-600 border border-slate-200">{dateStr}</td>
+                            <td className="py-1.5 px-2 border border-slate-200">
+                              <span className="font-bold text-slate-900 block">{q.fullName}</span>
+                              <span className="text-[9px] text-slate-500">{q.companyName || q.company || 'Direct Buyer'}</span>
+                            </td>
+                            <td className="py-1.5 px-2 border border-slate-200 text-blue-700">
+                              <div>{q.corporateEmail || q.businessEmail || 'N/A'}</div>
+                              <div className="text-[9px] text-slate-600">{q.phoneWhatsApp || q.phone || 'N/A'}</div>
+                            </td>
+                            <td className="py-1.5 px-2 border border-slate-200">
+                              <div className="font-semibold text-slate-900">{q.destinationCountry || q.country || 'Global'}</div>
+                              <div className="text-[9px] text-slate-500">{q.destinationPort || 'Direct Port'}</div>
+                            </td>
+                            <td className="py-1.5 px-2 font-semibold text-slate-900 border border-slate-200">
+                              {q.productOfInterest || q.productName || 'Export Product'}
+                            </td>
+                            <td className="py-1.5 px-2 text-slate-900 font-medium border border-slate-200">
+                              {q.quantity || q.estimatedQuantity || 'To Be Specified'}
+                            </td>
+                            <td className="py-1.5 px-2 text-slate-600 text-[9px] max-w-[160px] line-clamp-2 border border-slate-200">
+                              {q.technicalSpecifications || q.message || 'Standard grade'}
+                            </td>
+                            <td className="py-1.5 px-2 text-center border border-slate-200 font-bold">
+                              <span className="inline-block px-1.5 py-0.5 rounded text-[8px]" style={{
+                                backgroundColor: q.status === 'Quoted' ? '#dcfce7' : q.status === 'Pending' ? '#fef3c7' : '#f3e8ff',
+                                color: q.status === 'Quoted' ? '#166534' : q.status === 'Pending' ? '#92400e' : '#6b21a8'
+                              }}>
+                                {q.status}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+
+                {/* Sign-off & Verification Block */}
+                <div className="flex items-end justify-between pt-4 border-t border-slate-300 text-[9px] text-slate-500">
+                  <div>
+                    <div className="font-bold text-slate-900 text-[10px]">IPM EXIM GLOBAL PRIVATE LIMITED</div>
+                    <div>Executive Export Register &bull; Official Trade Audit Record &bull; Confidential</div>
+                    <div>Inquiries Desk: ipmexim@gmail.com &bull; Website: www.ipmexim.com</div>
+                  </div>
+                  <div className="text-center w-48">
+                    <div className="border-b border-slate-400 mb-1 h-8"></div>
+                    <div className="font-bold text-slate-900 text-[10px]">Chief Commercial Officer</div>
+                    <div>Authorized Trade Signatory</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
