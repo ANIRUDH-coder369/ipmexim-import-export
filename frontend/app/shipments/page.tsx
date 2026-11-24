@@ -20,8 +20,6 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { getApiUrl } from '@/utils/apiConfig';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 
 interface ShipmentItem {
   _id?: string;
@@ -143,11 +141,8 @@ export default function ShipmentsPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#060D1A] text-white">
-      <Header />
-
-      <main className="flex-1 pb-24">
-        {/* Hero Section */}
+    <div className="w-full bg-[#060D1A] text-white pb-24">
+      {/* Hero Section */}
         <section className="relative pt-24 pb-16 px-4 sm:px-6 lg:px-8 overflow-hidden">
           {/* Ambient Lighting Orbs */}
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -430,9 +425,6 @@ export default function ShipmentsPage() {
             </div>
           </div>
         )}
-      </main>
-
-      <Footer />
     </div>
   );
 }
