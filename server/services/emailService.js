@@ -29,8 +29,8 @@ const getLogoAttachment = () => {
 const createTransporter = () => {
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
   const port = parseInt(process.env.SMTP_PORT || '587', 10);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const user = process.env.SMTP_USER || 'ipmexim@gmail.com';
+  const pass = process.env.SMTP_PASS || 'ephajflwefjnokyu';
 
   if (user && pass) {
     return nodemailer.createTransport({
@@ -157,7 +157,13 @@ const sendNewQuotationNotification = async (quotation, attachmentPath) => {
     from: fromAddress,
     to: recipient,
     replyTo: quotation.corporateEmail,
-    subject: `[New Quotation] ${quotation.productOfInterest || 'Sourcing Requirement'} from ${quotation.fullName} (${quotation.destinationCountry})`,
+    subject: `🚨 [NEW QUOTATION] ${quotation.fullName} (${quotation.destinationCountry}) - ${quotation.productOfInterest || 'Sourcing'}`,
+    priority: 'high',
+    headers: {
+      'X-Priority': '1 (Highest)',
+      'X-MSMail-Priority': 'High',
+      'Importance': 'High'
+    },
     html: htmlContent,
     attachments
   });

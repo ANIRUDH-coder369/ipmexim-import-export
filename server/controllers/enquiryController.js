@@ -101,15 +101,28 @@ const createEnquiry = async (req, res) => {
       ipAddress: req.ip || req.connection?.remoteAddress || ''
     });
 
-    // 1. Send quotation notification email with all info to ipmexim@gmail.com
-    sendNewQuotationNotification(enquiry, finalAttachmentPath || req.file?.path).catch((mailErr) => {
-      console.error('[Admin Notification Email Error] Failed to send email to ipmexim@gmail.com:', mailErr.message);
-    });
+    // 1. Send quotation notification email to admin (ipmexim@gmail.com) and auto-confirmation to customer
+    // We MUST await both promises using Promise.allSettled so Vercel Serverless does NOT freeze before dispatch finishes
+    try {
+      const [adminResult, customerResult] = await Promise.allSettled([
+        sendNewQuotationNotification(enquiry, finalAttachmentPath || req.file?.path),
+        sendCustomerQuotationConfirmation(enquiry, finalAttachmentPath || req.file?.path)
+      ]);
 
-    // 2. Send auto confirmation email directly to the customer with all filled information
-    sendCustomerQuotationConfirmation(enquiry, finalAttachmentPath || req.file?.path).catch((mailErr) => {
-      console.error('[Customer Confirmation Email Error] Failed to send email to customer:', mailErr.message);
-    });
+      if (adminResult.status === 'fulfilled') {
+        console.log('[Admin Notification Email Success] Dispatched to ipmexim@gmail.com:', adminResult.value?.messageId);
+      } else {
+        console.error('[Admin Notification Email Error] Failed to send email to ipmexim@gmail.com:', adminResult.reason?.message || adminResult.reason);
+      }
+
+      if (customerResult.status === 'fulfilled') {
+        console.log('[Customer Confirmation Email Success] Dispatched to customer:', customerResult.value?.messageId);
+      } else {
+        console.error('[Customer Confirmation Email Error] Failed to send email to customer:', customerResult.reason?.message || customerResult.reason);
+      }
+    } catch (mailDispatchErr) {
+      console.error('[Email Dispatch System Error]:', mailDispatchErr.message);
+    }
 
     res.status(201).json({
       success: true,
