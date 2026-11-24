@@ -50,14 +50,14 @@ export const Header: React.FC = () => {
       }}
     >
       {/* Main Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 h-20 flex items-center justify-between gap-4 sm:gap-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-12 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-6">
         {/* Zone 1: Brand Logo & Wordmark */}
         <Link
           href="/"
-          className="group flex items-center gap-3 whitespace-nowrap shrink-0 text-decoration-none transition-transform duration-200 active:scale-[0.98]"
+          className="group flex items-center gap-2 sm:gap-3 whitespace-nowrap shrink-0 text-decoration-none transition-transform duration-200 active:scale-[0.98]"
         >
           {/* Official Emblem Logo Image */}
-          <div className="relative flex items-center justify-center h-12 w-12 sm:h-14 sm:w-14 rounded-xl bg-white/5 p-1 border border-white/10 shadow-sm group-hover:border-[#D4AF69]/40 transition-colors">
+          <div className="relative flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 rounded-xl bg-white/5 p-1 border border-white/10 shadow-sm group-hover:border-[#D4AF69]/40 transition-colors shrink-0">
             <img
               src="/logo.png"
               alt="IPM Exim Global Trade Logo"
@@ -65,26 +65,20 @@ export const Header: React.FC = () => {
             />
           </div>
 
-          <div className="flex flex-col">
-            <div className="flex items-baseline gap-1.5">
+          <div className="flex flex-col justify-center">
+            <div className="flex items-baseline gap-1">
               <span
-                className="font-serif text-2xl sm:text-3xl font-normal tracking-tight transition-colors group-hover:text-[#D4AF69]"
+                className="font-serif text-xl sm:text-2xl lg:text-3xl font-semibold sm:font-normal tracking-tight transition-colors group-hover:text-[#D4AF69]"
                 style={{ color: 'var(--text-primary)' }}
               >
                 IPM Exim
-              </span>
-              <span
-                className="text-[9px] sm:text-[10px] uppercase tracking-[0.24em] font-sans font-bold"
-                style={{ color: 'var(--gold)' }}
-              >
-
               </span>
             </div>
             <span
               className="hidden sm:block text-[9px] uppercase tracking-widest font-sans font-medium opacity-60"
               style={{ color: 'var(--text-muted)' }}
             >
-              The  International Business
+              The International Business
             </span>
           </div>
         </Link>
@@ -118,15 +112,17 @@ export const Header: React.FC = () => {
         </nav>
 
         {/* Zone 3: Language Selector, Theme Toggle, Primary Action & Mobile Menu */}
-        <div className="flex items-center gap-2 sm:gap-3.5 shrink-0">
-          {/* Multi-Language Searchable Selector (Desktop) */}
-          <LanguageSelector />
+        <div className="flex items-center gap-1.5 sm:gap-3.5 shrink-0">
+          {/* Multi-Language Searchable Selector (Desktop / Tablet) */}
+          <div className="hidden md:block">
+            <LanguageSelector />
+          </div>
 
           {/* Light / Dark Mode Toggle Button */}
           <button
             type="button"
             onClick={toggleTheme}
-            className="p-2 sm:p-2.5 border transition-all rounded-lg flex items-center justify-center cursor-pointer shadow-sm hover:border-[#D4AF69]/50 active:scale-95"
+            className="p-2 sm:p-2.5 border transition-all rounded-xl flex items-center justify-center cursor-pointer shadow-sm hover:border-[#D4AF69]/50 active:scale-95"
             style={{
               backgroundColor: 'var(--bg-card-elevated)',
               borderColor: 'var(--border-input)',
@@ -145,7 +141,7 @@ export const Header: React.FC = () => {
           {/* Request a Quote CTA */}
           <button
             onClick={() => openQuoteModal()}
-            className="btn-glass-morphism !py-2.5 !px-4 sm:!px-5 text-[11px] sm:text-xs tracking-wider"
+            className="btn-glass-morphism !py-2 !px-3 sm:!py-2.5 sm:!px-5 text-[11px] sm:text-xs font-semibold tracking-wider whitespace-nowrap rounded-xl shadow-md"
           >
             <span className="hidden sm:inline">{t('header.quoteBtn')}</span>
             <span className="sm:hidden">{t('header.quoteShort')}</span>
@@ -154,7 +150,7 @@ export const Header: React.FC = () => {
           {/* Mobile hamburger menu toggle */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 rounded-lg border focus:outline-none cursor-pointer transition-colors"
+            className="lg:hidden p-2 sm:p-2.5 rounded-xl border focus:outline-none cursor-pointer transition-all flex items-center justify-center active:scale-95 shrink-0"
             style={{
               backgroundColor: 'var(--bg-card-elevated)',
               borderColor: 'var(--border-input)',
@@ -162,7 +158,7 @@ export const Header: React.FC = () => {
             }}
             aria-label="Toggle navigation menu"
           >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileMenuOpen ? <X className="w-5 h-5 text-[#D4AF69]" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
@@ -170,19 +166,30 @@ export const Header: React.FC = () => {
       {/* Mobile Menu Drawer */}
       {mobileMenuOpen && (
         <div
-          className="lg:hidden border-b px-6 py-6 space-y-5 animate-fade-in"
+          className="lg:hidden border-b px-4 sm:px-6 py-5 space-y-5 animate-fade-in max-h-[calc(100vh-4rem)] sm:max-h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain shadow-2xl backdrop-blur-2xl"
           style={{
             backgroundColor: 'var(--bg-card-elevated)',
             borderColor: 'var(--border-card)',
           }}
         >
           {/* Mobile Brand Header */}
-          <div className="flex items-center gap-3 pb-3 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
-            <img src="/logo.png" alt="IPM Exim" className="h-8 w-auto object-contain" />
-            <div>
-              <span className="font-serif text-lg text-ivory">IPM Exim Global</span>
-              <span className="block text-[9px] uppercase tracking-widest text-[#D4AF69]">Commercial Portal</span>
+          <div className="flex items-center justify-between pb-3.5 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 p-1 flex items-center justify-center">
+                <img src="/logo.png" alt="IPM Exim" className="h-full w-full object-contain" />
+              </div>
+              <div>
+                <span className="font-serif text-lg font-bold" style={{ color: 'var(--text-primary)' }}>IPM Exim Global</span>
+                <span className="block text-[9px] uppercase tracking-widest text-[#D4AF69] font-medium">Commercial Trade Portal</span>
+              </div>
             </div>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-muted-grey hover:text-white"
+              aria-label="Close menu"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
           <nav className="flex flex-col space-y-1">
@@ -193,14 +200,18 @@ export const Header: React.FC = () => {
                   key={link.path}
                   href={link.path}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-sm py-2.5 px-3 rounded-lg transition-colors"
+                  className="text-sm py-2.5 px-3.5 rounded-xl transition-all flex items-center justify-between min-h-[44px]"
                   style={{
                     color: active ? 'var(--gold)' : 'var(--text-primary)',
                     backgroundColor: active ? 'var(--gold-muted)' : 'transparent',
-                    fontWeight: active ? 600 : 400,
+                    borderLeft: active ? '3px solid var(--gold)' : '3px solid transparent',
+                    fontWeight: active ? 600 : 500,
                   }}
                 >
-                  {link.label}
+                  <span>{link.label}</span>
+                  {active && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF69]" />
+                  )}
                 </Link>
               );
             })}
@@ -215,14 +226,14 @@ export const Header: React.FC = () => {
 
             {/* Mobile Theme Toggle */}
             <div
-              className="flex items-center justify-between py-2.5 px-3 rounded-lg border text-xs"
+              className="flex items-center justify-between py-2.5 px-3.5 rounded-xl border text-xs"
               style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
             >
               <span style={{ color: 'var(--text-muted)' }}>{t('header.themeAppearance')}</span>
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-all active:scale-95"
                 style={{
                   backgroundColor: 'var(--bg-card-elevated)',
                   borderColor: 'var(--border-input)',
@@ -257,7 +268,7 @@ export const Header: React.FC = () => {
                 setMobileMenuOpen(false);
                 openQuoteModal();
               }}
-              className="w-full btn-glass-morphism py-3 text-xs"
+              className="w-full btn-glass-morphism py-3.5 text-xs font-bold tracking-wider rounded-xl shadow-lg"
             >
               {t('header.quoteBtn')}
             </button>
