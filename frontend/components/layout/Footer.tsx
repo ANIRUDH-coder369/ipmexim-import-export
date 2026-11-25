@@ -31,8 +31,8 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-8 mb-16">
           {/* Brand Info & Mission */}
           <div className="lg:col-span-2 space-y-5">
-            <Link href="/" className="inline-flex items-center gap-4 group">
-              <div className="flex items-center justify-center h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-white/5 p-2 border border-white/10 group-hover:border-[#D4AF69]/50 transition-all shadow-md">
+            <Link href="/" className="inline-flex flex-wrap items-center gap-4 sm:gap-5 group">
+              <div className="flex items-center justify-center h-24 w-[150px] sm:h-28 sm:w-[176px] lg:h-32 lg:w-[200px] rounded-2xl bg-white/5 p-1 sm:p-1.5 border border-white/10 group-hover:border-[#D4AF69]/50 transition-all shadow-md shrink-0 overflow-hidden">
                 <img
                   src="/logo.png"
                   alt="IPM Exim Global"

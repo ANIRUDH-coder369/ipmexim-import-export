@@ -50,14 +50,14 @@ export const Header: React.FC = () => {
       }}
     >
       {/* Main Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-12 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 xl:px-12 h-[72px] sm:h-24 flex items-center justify-between gap-2 sm:gap-5">
         {/* Zone 1: Brand Logo & Wordmark */}
         <Link
           href="/"
           className="group flex items-center gap-2 sm:gap-3 whitespace-nowrap shrink-0 text-decoration-none transition-transform duration-200 active:scale-[0.98]"
         >
           {/* Official Emblem Logo Image */}
-          <div className="relative flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 rounded-xl bg-white/5 p-1 border border-white/10 shadow-sm group-hover:border-[#D4AF69]/40 transition-colors shrink-0">
+          <div className="relative flex items-center justify-center h-12 w-[76px] sm:h-16 sm:w-24 lg:h-[72px] lg:w-[114px] xl:h-20 xl:w-32 rounded-xl bg-white/5 p-0.5 sm:p-1 border border-white/10 shadow-sm group-hover:border-[#D4AF69]/40 transition-colors shrink-0 overflow-hidden">
             <img
               src="/logo.png"
               alt="IPM Exim Global Trade Logo"
@@ -68,7 +68,7 @@ export const Header: React.FC = () => {
           <div className="flex flex-col justify-center">
             <div className="flex items-baseline gap-1">
               <span
-                className="font-serif text-xl sm:text-2xl lg:text-3xl font-semibold sm:font-normal tracking-tight transition-colors group-hover:text-[#D4AF69]"
+                className="font-serif text-lg sm:text-2xl lg:text-3xl font-semibold sm:font-normal tracking-tight transition-colors group-hover:text-[#D4AF69]"
                 style={{ color: 'var(--text-primary)' }}
               >
                 IPM Exim
@@ -84,7 +84,7 @@ export const Header: React.FC = () => {
         </Link>
 
         {/* Zone 2: Navigation Links with Premium Indicators */}
-        <nav className="hidden lg:flex items-center gap-7 text-[13px] font-medium">
+        <nav className="hidden lg:flex items-center lg:gap-4 xl:gap-6 2xl:gap-7 text-[13px] font-medium">
           {navLinks.map((link) => {
             const active = isActive(link.path);
             return (
@@ -166,7 +166,7 @@ export const Header: React.FC = () => {
       {/* Mobile Menu Drawer */}
       {mobileMenuOpen && (
         <div
-          className="lg:hidden border-b px-4 sm:px-6 py-5 space-y-5 animate-fade-in max-h-[calc(100vh-4rem)] sm:max-h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain shadow-2xl backdrop-blur-2xl"
+          className="lg:hidden border-b px-4 sm:px-6 py-5 space-y-5 animate-fade-in max-h-[calc(100vh-4.5rem)] sm:max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain shadow-2xl backdrop-blur-2xl"
           style={{
             backgroundColor: 'var(--bg-card-elevated)',
             borderColor: 'var(--border-card)',
@@ -175,7 +175,7 @@ export const Header: React.FC = () => {
           {/* Mobile Brand Header */}
           <div className="flex items-center justify-between pb-3.5 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 p-1 flex items-center justify-center">
+              <div className="h-12 w-[76px] rounded-lg bg-white/5 border border-white/10 p-0.5 flex items-center justify-center overflow-hidden shrink-0">
                 <img src="/logo.png" alt="IPM Exim" className="h-full w-full object-contain" />
               </div>
               <div>
