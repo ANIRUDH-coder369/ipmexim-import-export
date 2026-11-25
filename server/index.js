@@ -11,6 +11,7 @@ const enquiryRoutes = require('./routes/enquiryRoutes');
 const seoRoutes = require('./routes/seoRoutes');
 const productLineRoutes = require('./routes/productLineRoutes');
 const productRoutes = require('./routes/productRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
 const shipmentRoutes = require('./routes/shipmentRoutes');
 const {
   helmetMiddleware,
@@ -131,7 +132,11 @@ app.use('/product-lines', productLineRoutes);
 app.use('/api/products', productRoutes);
 app.use('/products', productRoutes);
 
-// 14. Mount Shipment & Consignment Routes (Dynamic From/To, Date, Video Links)
+// 14. Mount Export Categories Routes (Dynamic Categories CRUD)
+app.use('/api/categories', categoryRoutes);
+app.use('/categories', categoryRoutes);
+
+// 15. Mount Shipment & Consignment Routes (Dynamic From/To, Date, Video Links)
 app.use('/api/shipments', shipmentRoutes);
 app.use('/shipments', shipmentRoutes);
 

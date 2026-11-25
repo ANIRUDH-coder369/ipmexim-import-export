@@ -50,7 +50,18 @@ import {
 } from 'lucide-react';
 import { getApiUrl } from '@/utils/apiConfig';
 import { ProductItem } from '@/store/slices/productSlice';
-import { PRODUCTS } from '@/data/products';
+import { PRODUCTS, PRODUCT_CATEGORIES } from '@/data/products';
+
+export interface ExportCategoryItem {
+  _id?: string;
+  id?: string;
+  categoryId?: string;
+  name: string;
+  description?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+  productCount?: number;
+}
 
 interface QuotationEntry {
   _id?: string;
@@ -280,6 +291,20 @@ export default function AdminDashboardPage() {
     featured: true,
     imageUrl: '',
   });
+
+  // Dynamic Export Product Categories CRUD State
+  const [categoriesList, setCategoriesList] = useState<ExportCategoryItem[]>([]);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<ExportCategoryItem | null>(null);
+  const [categoryFormData, setCategoryFormData] = useState({
+    name: '',
+    description: '',
+    categoryId: '',
+  });
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
+  const [categoryNotice, setCategoryNotice] = useState<string | null>(null);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [isDeletingCategoryId, setIsDeletingCategoryId] = useState<string | null>(null);
 
   // Dynamic Product Lines Management State
   const [productLines, setProductLines] = useState<ProductLineItem[]>([]);
@@ -759,6 +784,7 @@ export default function AdminDashboardPage() {
           setIsCheckingAuth(false);
           fetchQuotations(token);
           fetchProductsAdmin(token);
+          fetchCategoriesAdmin(token);
           fetchProductLinesAdmin(token);
           fetchShipmentsAdmin(token);
           return;
@@ -785,6 +811,7 @@ export default function AdminDashboardPage() {
       setIsCheckingAuth(false);
       fetchQuotations(token);
       fetchProductsAdmin(token);
+      fetchCategoriesAdmin(token);
       fetchProductLinesAdmin(token);
       fetchShipmentsAdmin(token);
     };
@@ -920,6 +947,60 @@ export default function AdminDashboardPage() {
 
     // Fallback to initial PRODUCTS catalog
     setProductsList(PRODUCTS as any);
+  };
+
+  const fetchCategoriesAdmin = async (token?: string | null) => {
+    try {
+      const apiUrl = getApiUrl();
+      const authToken = token || localStorage.getItem('adminToken');
+      const res = await fetch(`${apiUrl}/categories/admin/all`, {
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.categories && Array.isArray(data.categories) && data.categories.length > 0) {
+          setCategoriesList(data.categories);
+          localStorage.setItem('ipm_admin_categories', JSON.stringify(data.categories));
+          return;
+        }
+      } else {
+        const pubRes = await fetch(`${apiUrl}/categories`);
+        if (pubRes.ok) {
+          const pubData = await pubRes.json();
+          if (pubData.categories && Array.isArray(pubData.categories) && pubData.categories.length > 0) {
+            setCategoriesList(pubData.categories);
+            localStorage.setItem('ipm_admin_categories', JSON.stringify(pubData.categories));
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Backend categories offline, using local store:', err);
+    }
+
+    try {
+      const stored = localStorage.getItem('ipm_admin_categories');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCategoriesList(parsed);
+          return;
+        }
+      }
+    } catch (e) {}
+
+    // Fallback to initial PRODUCT_CATEGORIES
+    const initialCats: ExportCategoryItem[] = PRODUCT_CATEGORIES.map((c, idx) => ({
+      categoryId: c.id,
+      name: c.name,
+      description: c.description || '',
+      sortOrder: idx + 1,
+      isActive: true
+    }));
+    setCategoriesList(initialCats);
+    try {
+      localStorage.setItem('ipm_admin_categories', JSON.stringify(initialCats));
+    } catch (e) {}
   };
 
   // ========================================================
@@ -1063,11 +1144,15 @@ export default function AdminDashboardPage() {
 
   const handleOpenAddProduct = () => {
     setEditingProduct(null);
+    const defaultCat = categoriesList.length > 0 ? categoriesList[0] : null;
+    const defaultCatName = defaultCat ? defaultCat.name : 'Spices & Food Products';
+    const defaultCatId = defaultCat ? (defaultCat.categoryId || defaultCat.id || 'spices-food') : 'spices-food';
+
     setProductFormData({
       name: '',
       slug: '',
-      categoryName: 'Spices & Food Products',
-      categoryId: 'spices-food',
+      categoryName: defaultCatName,
+      categoryId: defaultCatId,
       shortDescription: '',
       fullDescription: '',
       origin: 'India',
@@ -1085,11 +1170,16 @@ export default function AdminDashboardPage() {
 
   const handleOpenEditProduct = (prod: ProductItem) => {
     setEditingProduct(prod);
+    const initialCatName = prod.categoryName || 'Spices & Food Products';
+    const matchedCat = categoriesList.find(c => c.name === initialCatName || (c.categoryId && c.categoryId === prod.categoryId));
+    const effectiveCatName = matchedCat ? matchedCat.name : initialCatName;
+    const effectiveCatId = matchedCat ? (matchedCat.categoryId || matchedCat.id || prod.categoryId || 'spices-food') : (prod.categoryId || 'spices-food');
+
     setProductFormData({
       name: prod.name || '',
       slug: prod.slug || '',
-      categoryName: prod.categoryName || 'Spices & Food Products',
-      categoryId: prod.categoryId || 'spices-food',
+      categoryName: effectiveCatName,
+      categoryId: effectiveCatId,
       shortDescription: prod.shortDescription || '',
       fullDescription: prod.fullDescription || '',
       origin: prod.origin || 'India',
@@ -1222,6 +1312,211 @@ export default function AdminDashboardPage() {
       setTimeout(() => setProductNotice(null), 3000);
     } catch (err) {
       console.warn('Backend delete offline:', err);
+    }
+  };
+
+  // ========================================================
+  // EXPORT CATEGORIES CRUD HANDLERS
+  // ========================================================
+
+  const handleOpenAddCategory = () => {
+    setEditingCategory(null);
+    setCategoryFormData({
+      name: '',
+      description: '',
+      categoryId: ''
+    });
+    setCategoryError(null);
+    setCategoryNotice(null);
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleOpenEditCategory = (cat: ExportCategoryItem) => {
+    setEditingCategory(cat);
+    setCategoryFormData({
+      name: cat.name,
+      description: cat.description || '',
+      categoryId: cat.categoryId || cat.id || ''
+    });
+    setCategoryError(null);
+    setCategoryNotice(null);
+  };
+
+  const handleSaveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!categoryFormData.name.trim()) {
+      setCategoryError('Category name is required.');
+      return;
+    }
+
+    setIsSavingCategory(true);
+    setCategoryError(null);
+
+    const cleanName = categoryFormData.name.trim();
+    const cleanDesc = categoryFormData.description.trim();
+    const cleanSlug = categoryFormData.categoryId.trim() || cleanName.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      const apiUrl = getApiUrl();
+      const targetId = editingCategory ? (editingCategory._id || editingCategory.id || editingCategory.categoryId) : '';
+      const url = editingCategory ? `${apiUrl}/categories/${targetId}` : `${apiUrl}/categories`;
+      const method = editingCategory ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: cleanName,
+          description: cleanDesc,
+          categoryId: cleanSlug,
+          isActive: true
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const savedCat: ExportCategoryItem = data.category || {
+          _id: targetId || Date.now().toString(),
+          categoryId: cleanSlug,
+          name: cleanName,
+          description: cleanDesc,
+          isActive: true
+        };
+
+        if (editingCategory) {
+          const oldName = editingCategory.name;
+          const updatedList = categoriesList.map(c =>
+            (c._id === targetId || c.categoryId === targetId || c.name === oldName) ? { ...c, ...savedCat } : c
+          );
+          setCategoriesList(updatedList);
+          localStorage.setItem('ipm_admin_categories', JSON.stringify(updatedList));
+
+          // Also sync any products in productsList that used oldName
+          setProductsList(prev => prev.map(p => {
+            if (p.categoryName === oldName) {
+              return { ...p, categoryName: cleanName, categoryId: cleanSlug };
+            }
+            return p;
+          }));
+          setCategoryNotice(`Category "${savedCat.name}" updated successfully!`);
+        } else {
+          const updatedList = [...categoriesList, savedCat];
+          setCategoriesList(updatedList);
+          localStorage.setItem('ipm_admin_categories', JSON.stringify(updatedList));
+          setCategoryNotice(`Category "${savedCat.name}" created successfully!`);
+        }
+
+        // Reset form
+        setEditingCategory(null);
+        setCategoryFormData({ name: '', description: '', categoryId: '' });
+      } else {
+        const fallbackCat: ExportCategoryItem = {
+          _id: targetId || `cat-local-${Date.now()}`,
+          categoryId: cleanSlug,
+          name: cleanName,
+          description: cleanDesc,
+          isActive: true
+        };
+        if (editingCategory) {
+          const oldName = editingCategory.name;
+          const updatedList = categoriesList.map(c =>
+            (c._id === targetId || c.categoryId === targetId || c.name === oldName) ? { ...c, ...fallbackCat } : c
+          );
+          setCategoriesList(updatedList);
+          localStorage.setItem('ipm_admin_categories', JSON.stringify(updatedList));
+          setProductsList(prev => prev.map(p => p.categoryName === oldName ? { ...p, categoryName: cleanName, categoryId: cleanSlug } : p));
+          setCategoryNotice(`Category "${cleanName}" updated (stored locally).`);
+        } else {
+          const updatedList = [...categoriesList, fallbackCat];
+          setCategoriesList(updatedList);
+          localStorage.setItem('ipm_admin_categories', JSON.stringify(updatedList));
+          setCategoryNotice(`Category "${cleanName}" added (stored locally).`);
+        }
+        setEditingCategory(null);
+        setCategoryFormData({ name: '', description: '', categoryId: '' });
+      }
+    } catch (err: any) {
+      const fallbackCat: ExportCategoryItem = {
+        _id: editingCategory ? (editingCategory._id || editingCategory.id || editingCategory.categoryId) : `cat-local-${Date.now()}`,
+        categoryId: cleanSlug,
+        name: cleanName,
+        description: cleanDesc,
+        isActive: true
+      };
+      if (editingCategory) {
+        const oldName = editingCategory.name;
+        const updatedList = categoriesList.map(c =>
+          (c._id === fallbackCat._id || c.categoryId === fallbackCat.categoryId || c.name === oldName) ? { ...c, ...fallbackCat } : c
+        );
+        setCategoriesList(updatedList);
+        localStorage.setItem('ipm_admin_categories', JSON.stringify(updatedList));
+        setProductsList(prev => prev.map(p => p.categoryName === oldName ? { ...p, categoryName: cleanName, categoryId: cleanSlug } : p));
+        setCategoryNotice(`Category "${cleanName}" updated locally.`);
+      } else {
+        const updatedList = [...categoriesList, fallbackCat];
+        setCategoriesList(updatedList);
+        localStorage.setItem('ipm_admin_categories', JSON.stringify(updatedList));
+        setCategoryNotice(`Category "${cleanName}" added locally.`);
+      }
+      setEditingCategory(null);
+      setCategoryFormData({ name: '', description: '', categoryId: '' });
+    } finally {
+      setIsSavingCategory(false);
+      setTimeout(() => setCategoryNotice(null), 3000);
+    }
+  };
+
+  const handleDeleteCategory = async (cat: ExportCategoryItem) => {
+    const catSlug = cat.categoryId || cat.id;
+    const assignedProducts = productsList.filter(p =>
+      (catSlug && p.categoryId === catSlug) || p.categoryName === cat.name
+    );
+
+    if (assignedProducts.length > 0) {
+      alert(`Cannot delete category "${cat.name}".\n\nThere are currently ${assignedProducts.length} export product(s) assigned to this category (${assignedProducts.slice(0, 3).map(p => p.name).join(', ')}${assignedProducts.length > 3 ? '...' : ''}).\n\nPlease reassign these products to another category before deleting.`);
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete category "${cat.name}"?`)) {
+      return;
+    }
+
+    const targetId = cat._id || cat.id || cat.categoryId || '';
+    setIsDeletingCategoryId(targetId);
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      const apiUrl = getApiUrl();
+      await fetch(`${apiUrl}/categories/${targetId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const updatedList = categoriesList.filter(c =>
+        (c._id !== targetId && c.categoryId !== targetId && c.name !== cat.name)
+      );
+      setCategoriesList(updatedList);
+      localStorage.setItem('ipm_admin_categories', JSON.stringify(updatedList));
+      setCategoryNotice(`Category "${cat.name}" deleted.`);
+      if (editingCategory?.name === cat.name) {
+        setEditingCategory(null);
+        setCategoryFormData({ name: '', description: '', categoryId: '' });
+      }
+    } catch (err: any) {
+      const updatedList = categoriesList.filter(c =>
+        (c._id !== targetId && c.categoryId !== targetId && c.name !== cat.name)
+      );
+      setCategoriesList(updatedList);
+      localStorage.setItem('ipm_admin_categories', JSON.stringify(updatedList));
+      setCategoryNotice(`Category "${cat.name}" deleted.`);
+    } finally {
+      setIsDeletingCategoryId(null);
+      setTimeout(() => setCategoryNotice(null), 3000);
     }
   };
 
@@ -1820,7 +2115,10 @@ export default function AdminDashboardPage() {
           <button
             onClick={() => {
               if (activeAdminTab === 'quotations' || activeAdminTab === 'monthlyReport') fetchQuotations();
-              else if (activeAdminTab === 'products') fetchProductsAdmin();
+              else if (activeAdminTab === 'products') {
+                fetchProductsAdmin();
+                fetchCategoriesAdmin();
+              }
               else if (activeAdminTab === 'productLines') fetchProductLinesAdmin();
               else fetchShipmentsAdmin();
             }}
@@ -2062,13 +2360,23 @@ export default function AdminDashboardPage() {
                 </p>
               </div>
 
-              <button
-                onClick={handleOpenAddProduct}
-                className="btn-glass-morphism px-6 py-3.5 text-sm sm:text-base font-bold tracking-wide cursor-pointer inline-flex items-center gap-2.5 shrink-0 shadow-xl min-h-[44px]"
-              >
-                <Plus className="w-5 h-5 text-white" />
-                <span>Add Export Product</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-3 shrink-0">
+                <button
+                  onClick={handleOpenAddCategory}
+                  className="px-4 py-3.5 rounded-xl border border-[#D4AF69]/40 hover:border-[#D4AF69] bg-[#D4AF69]/10 hover:bg-[#D4AF69]/20 text-[#D4AF69] text-xs sm:text-sm font-bold tracking-wide cursor-pointer inline-flex items-center gap-2 transition-all min-h-[44px]"
+                  title="Manage Export Categories (Add, Edit, Delete)"
+                >
+                  <Layers className="w-4 h-4 text-[#D4AF69]" />
+                  <span>Manage Categories ({categoriesList.length})</span>
+                </button>
+                <button
+                  onClick={handleOpenAddProduct}
+                  className="btn-glass-morphism px-6 py-3.5 text-sm sm:text-base font-bold tracking-wide cursor-pointer inline-flex items-center gap-2.5 shrink-0 shadow-xl min-h-[44px]"
+                >
+                  <Plus className="w-5 h-5 text-white" />
+                  <span>Add Export Product</span>
+                </button>
+              </div>
             </div>
 
             {/* Success Notice Banner */}
@@ -2080,21 +2388,26 @@ export default function AdminDashboardPage() {
             )}
 
             {/* Metric KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <div className="card-luxury p-6 rounded-2xl border space-y-2">
                 <span className="text-xs uppercase font-bold tracking-wider" style={{ color: 'var(--gold)' }}>Total Products</span>
                 <p className="text-3xl font-bold font-serif">{productStats.total}</p>
                 <p className="text-xs text-muted-grey">Export items registered in database</p>
               </div>
               <div className="card-luxury p-6 rounded-2xl border space-y-2">
-                <span className="text-xs uppercase font-bold tracking-wider" style={{ color: 'var(--gold)' }}>Featured on Homepage</span>
-                <p className="text-3xl font-bold font-serif text-[#D4AF69]">{productStats.featured}</p>
-                <p className="text-xs text-muted-grey">Displayed in primary customer showcase</p>
+                <span className="text-xs uppercase font-bold tracking-wider" style={{ color: 'var(--gold)' }}>Export Categories</span>
+                <p className="text-3xl font-bold font-serif text-[#D4AF69]">{categoriesList.length}</p>
+                <p className="text-xs text-muted-grey">Active categories configured</p>
+              </div>
+              <div className="card-luxury p-6 rounded-2xl border space-y-2">
+                <span className="text-xs uppercase font-bold tracking-wider" style={{ color: 'var(--gold)' }}>Featured on Home</span>
+                <p className="text-3xl font-bold font-serif text-amber-400">{productStats.featured}</p>
+                <p className="text-xs text-muted-grey">Primary customer showcase</p>
               </div>
               <div className="card-luxury p-6 rounded-2xl border space-y-2">
                 <span className="text-xs uppercase font-bold tracking-wider" style={{ color: 'var(--gold)' }}>Active In Stock</span>
                 <p className="text-3xl font-bold font-serif text-emerald-400">{productStats.active}</p>
-                <p className="text-xs text-muted-grey">Available for commercial container export</p>
+                <p className="text-xs text-muted-grey">Available for container export</p>
               </div>
             </div>
 
@@ -2121,10 +2434,11 @@ export default function AdminDashboardPage() {
                 >
                   <option value="ALL">All Categories</option>
                   <option value="FEATURED">⭐ Featured Only</option>
-                  <option value="Spices & Food Products">Spices & Food Products</option>
-                  <option value="Grains & Agricultural Staples">Grains & Agricultural Staples</option>
-                  <option value="Textiles & Fine Fabrics">Textiles & Fine Fabrics</option>
-                  <option value="Metal & Artisanal Copperware">Metal & Artisanal Copperware</option>
+                  {categoriesList.map((cat) => (
+                    <option key={cat._id || cat.id || cat.categoryId || cat.name} value={cat.name}>
+                      {cat.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -3735,24 +4049,35 @@ export default function AdminDashboardPage() {
               {/* Two Column: Category & Status */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-bold mb-1" style={{ color: 'var(--gold)' }}>
-                    Export Category <span className="text-red-400">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block font-bold text-sm" style={{ color: 'var(--gold)' }}>
+                      Export Category <span className="text-red-400">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleOpenAddCategory}
+                      className="text-xs font-semibold text-[#D4AF69] hover:text-white inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-[#D4AF69]/40 hover:border-[#D4AF69] hover:bg-[#D4AF69]/10 transition-all cursor-pointer"
+                      title="Manage export categories (add, edit, or delete)"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>+ Manage Categories</span>
+                    </button>
+                  </div>
                   <select
                     value={productFormData.categoryName}
                     onChange={(e) => {
                       const catName = e.target.value;
-                      const catId = catName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                      const matched = categoriesList.find(c => c.name === catName);
+                      const catId = matched?.categoryId || matched?.id || catName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
                       setProductFormData({ ...productFormData, categoryName: catName, categoryId: catId });
                     }}
                     className="input-luxury"
                   >
-                    <option value="Spices & Food Products">Spices & Food Products</option>
-                    <option value="Grains & Agricultural Staples">Grains & Agricultural Staples</option>
-                    <option value="Textiles & Fine Fabrics">Textiles & Fine Fabrics</option>
-                    <option value="Metal & Artisanal Copperware">Metal & Artisanal Copperware</option>
-                    <option value="Ceramic & Natural Stone">Ceramic & Natural Stone</option>
-                    <option value="Eco-Friendly Packaging Materials">Eco-Friendly Packaging Materials</option>
+                    {categoriesList.map((cat) => (
+                      <option key={cat._id || cat.id || cat.categoryId || cat.name} value={cat.name}>
+                        {cat.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -3948,6 +4273,249 @@ export default function AdminDashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: MANAGE EXPORT PRODUCT CATEGORIES (CRUD)
+          ======================================================== */}
+      {isCategoryModalOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.82)', backdropFilter: 'blur(8px)' }}
+        >
+          <div
+            className="w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-fade-in"
+            style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
+          >
+            {/* Pinned Sticky Header */}
+            <div
+              className="p-4 sm:p-5 border-b flex items-center justify-between shrink-0"
+              style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-topbar)' }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#D4AF69]/10 border border-[#D4AF69]/30 flex items-center justify-center shrink-0">
+                  <Layers className="w-5 h-5 text-[#D4AF69]" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-lg sm:text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                    Export Product Categories
+                  </h3>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Create, edit, or delete categories for catalogue classification &amp; filtering
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setIsCategoryModalOpen(false);
+                  setEditingCategory(null);
+                  setCategoryError(null);
+                }}
+                className="p-2 rounded-xl text-muted-grey hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                title="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Form & List Body */}
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1">
+              {/* Notice Banners */}
+              {categoryNotice && (
+                <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs sm:text-sm flex items-center gap-2.5">
+                  <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+                  <span>{categoryNotice}</span>
+                </div>
+              )}
+              {categoryError && (
+                <div className="p-3.5 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 text-xs sm:text-sm flex items-center gap-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                  <span>{categoryError}</span>
+                </div>
+              )}
+
+              {/* Add / Edit Category Form */}
+              <form
+                onSubmit={handleSaveCategory}
+                className="p-4 sm:p-5 rounded-xl border space-y-4 shadow-sm"
+                style={{ backgroundColor: 'var(--bg-card-hover)', borderColor: 'var(--border-subtle)' }}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#D4AF69] flex items-center gap-2">
+                    {editingCategory ? <Pencil className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                    {editingCategory ? `Edit Category: ${editingCategory.name}` : 'Add New Export Category'}
+                  </span>
+                  {editingCategory && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingCategory(null);
+                        setCategoryFormData({ name: '', description: '', categoryId: '' });
+                        setCategoryError(null);
+                      }}
+                      className="text-xs text-muted-grey hover:text-white underline cursor-pointer"
+                    >
+                      Cancel Edit
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div>
+                    <label className="block text-xs font-bold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                      Category Name <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Organic Herbs & Botanicals"
+                      value={categoryFormData.name}
+                      onChange={(e) => setCategoryFormData({ ...categoryFormData, name: e.target.value })}
+                      className="input-luxury text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                      Slug / Identifier (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. herbs-botanicals (auto-generated)"
+                      value={categoryFormData.categoryId}
+                      onChange={(e) => setCategoryFormData({ ...categoryFormData, categoryId: e.target.value })}
+                      className="input-luxury text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                    Category Description (Optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Brief description of commodities and materials grouped under this export category..."
+                    value={categoryFormData.description}
+                    onChange={(e) => setCategoryFormData({ ...categoryFormData, description: e.target.value })}
+                    className="input-luxury text-sm resize-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-1">
+                  <button
+                    type="submit"
+                    disabled={isSavingCategory}
+                    className="btn-glass-morphism px-5 py-2.5 text-xs sm:text-sm font-bold tracking-wide cursor-pointer inline-flex items-center gap-2 min-h-[40px]"
+                  >
+                    {isSavingCategory ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Saving Category...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-white" />
+                        <span>{editingCategory ? 'Update Category' : 'Create Category'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Existing Categories List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-grey">
+                    Active Categories List ({categoriesList.length})
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {categoriesList.map((cat, idx) => {
+                    const catSlug = cat.categoryId || cat.id;
+                    const prodCount = productsList.filter(
+                      (p) => (catSlug && p.categoryId === catSlug) || p.categoryName === cat.name
+                    ).length;
+                    const isCurrentlyEditing = editingCategory && (editingCategory._id === cat._id || editingCategory.name === cat.name);
+
+                    return (
+                      <div
+                        key={cat._id || cat.id || cat.categoryId || idx}
+                        className={`p-3.5 sm:p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                          isCurrentlyEditing
+                            ? 'border-[#D4AF69] bg-[#D4AF69]/10'
+                            : 'hover:border-gold-border/40'
+                        }`}
+                        style={!isCurrentlyEditing ? { backgroundColor: 'var(--bg-topbar)', borderColor: 'var(--border-subtle)' } : {}}
+                      >
+                        <div className="space-y-1 flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-bold text-sm text-white">{cat.name}</span>
+                            <span className="badge-pill text-[10px] py-0.5 px-2 font-mono">
+                              {cat.categoryId || cat.id || 'standard'}
+                            </span>
+                            <span className="text-[11px] text-muted-grey px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
+                              {prodCount} product{prodCount === 1 ? '' : 's'}
+                            </span>
+                          </div>
+                          {cat.description && (
+                            <p className="text-xs line-clamp-2" style={{ color: 'var(--text-muted)' }}>
+                              {cat.description}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditCategory(cat)}
+                            className="p-2 rounded-lg text-muted-grey hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                            title="Edit Category"
+                          >
+                            <Pencil className="w-4 h-4 text-[#D4AF69]" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isDeletingCategoryId === (cat._id || cat.id || cat.categoryId)}
+                            onClick={() => handleDeleteCategory(cat)}
+                            className="p-2 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50"
+                            title={prodCount > 0 ? `Cannot delete: ${prodCount} products assigned` : "Delete Category"}
+                          >
+                            {isDeletingCategoryId === (cat._id || cat.id || cat.categoryId) ? (
+                              <RefreshCw className="w-4 h-4 animate-spin text-rose-400" />
+                            ) : (
+                              <Trash2 className="w-4 h-4 text-rose-400" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Pinned Action Footer */}
+            <div
+              className="p-4 sm:p-5 border-t flex items-center justify-between shrink-0"
+              style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-topbar)' }}
+            >
+              <span className="text-xs text-muted-grey">
+                Changes automatically reflect in export product forms and catalog filters.
+              </span>
+              <button
+                onClick={() => {
+                  setIsCategoryModalOpen(false);
+                  setEditingCategory(null);
+                  setCategoryError(null);
+                }}
+                className="btn-glass-morphism px-5 py-2.5 text-xs sm:text-sm font-bold tracking-wide cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

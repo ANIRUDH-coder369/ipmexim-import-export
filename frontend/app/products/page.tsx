@@ -18,11 +18,50 @@ export default function ProductsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'featured' | 'name-asc' | 'name-desc'>('featured');
+  const [categories, setCategories] = useState<{ id: string; name: string; description?: string }[]>(PRODUCT_CATEGORIES);
 
   const reduxProducts = useAppSelector((state) => state.product.products);
 
   useEffect(() => {
     dispatch(fetchProductsThunk());
+
+    const loadCategories = async () => {
+      try {
+        const apiUrl = getApiUrl();
+        const res = await fetch(`${apiUrl}/categories`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.categories && Array.isArray(data.categories) && data.categories.length > 0) {
+            setCategories(
+              data.categories.map((c: any) => ({
+                id: c.categoryId || c.id,
+                name: c.name,
+                description: c.description || ''
+              }))
+            );
+            return;
+          }
+        }
+      } catch (e) {}
+
+      try {
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('ipm_admin_categories') : null;
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCategories(
+              parsed.map((c: any) => ({
+                id: c.categoryId || c.id,
+                name: c.name,
+                description: c.description || ''
+              }))
+            );
+          }
+        }
+      } catch (e) {}
+    };
+
+    loadCategories();
   }, [dispatch]);
 
   const resolveProductImage = (url?: string) => {
@@ -81,10 +120,10 @@ export default function ProductsPage() {
             }`}
             style={selectedCategory !== 'all' ? { backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', borderColor: 'var(--border-card)' } : {}}
           >
-            {t('products.allCategories')} ({PRODUCTS.length})
+            {t('products.allCategories')} ({allProducts.length})
           </button>
-          {PRODUCT_CATEGORIES.map((cat) => {
-            const count = PRODUCTS.filter((p) => p.categoryId === cat.id).length;
+          {categories.map((cat) => {
+            const count = allProducts.filter((p: any) => p.categoryId === cat.id || p.categoryName === cat.name).length;
             const isSelected = selectedCategory === cat.id;
             return (
               <button
@@ -147,7 +186,7 @@ export default function ProductsPage() {
         <span>
           Showing <strong style={{ color: 'var(--text-primary)' }}>{filteredProducts.length}</strong> export commodities
           {selectedCategory !== 'all' && (
-            <span> in <strong style={{ color: 'var(--gold)' }}>{getCategoryName(selectedCategory, PRODUCT_CATEGORIES.find(c => c.id === selectedCategory)?.name || '')}</strong></span>
+            <span> in <strong style={{ color: 'var(--gold)' }}>{getCategoryName(selectedCategory, categories.find(c => c.id === selectedCategory)?.name || '')}</strong></span>
           )}
           {searchQuery && (
             <span> matching &ldquo;<strong style={{ color: 'var(--text-primary)' }}>{searchQuery}</strong>&rdquo;</span>
