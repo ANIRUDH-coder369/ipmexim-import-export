@@ -3108,11 +3108,11 @@ export default function AdminDashboardPage() {
           ======================================================== */}
       {isShipModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden"
           style={{ backgroundColor: 'var(--modal-overlay)', backdropFilter: 'blur(8px)' }}
         >
           <div 
-            className="relative w-full max-w-xl my-8 rounded-2xl border shadow-2xl p-6 sm:p-8 space-y-6"
+            className="relative w-full max-w-xl max-h-[92vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden"
             style={{
               backgroundColor: 'var(--bg-card)',
               borderColor: 'var(--border-card)',
@@ -3120,13 +3120,13 @@ export default function AdminDashboardPage() {
             }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--border-subtle)' }}>
+            <div className="flex items-center justify-between border-b p-5 sm:p-6 shrink-0" style={{ borderColor: 'var(--border-subtle)' }}>
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl border" style={{ backgroundColor: 'rgba(6, 182, 212, 0.1)', borderColor: 'rgba(6, 182, 212, 0.3)' }}>
+                <div className="p-2 rounded-xl border shrink-0" style={{ backgroundColor: 'rgba(6, 182, 212, 0.1)', borderColor: 'rgba(6, 182, 212, 0.3)' }}>
                   <Navigation className="w-5 h-5 text-cyan-400" />
                 </div>
                 <div>
-                  <h3 className="font-serif text-xl sm:text-2xl font-normal" style={{ color: 'var(--text-primary)' }}>
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
                     {editingShipment ? 'Update Consignment Journey' : 'Add New Consignment Journey'}
                   </h3>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -3136,23 +3136,23 @@ export default function AdminDashboardPage() {
               </div>
               <button 
                 onClick={() => setIsShipModalOpen(false)}
-                className="p-2 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-2 rounded-lg hover:bg-white/10 transition-colors cursor-pointer text-muted-grey hover:text-white"
                 style={{ color: 'var(--text-muted)' }}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Error Banner */}
-            {shipError && (
-              <div className="p-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-300 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-                <span>{shipError}</span>
-              </div>
-            )}
-
             {/* Form */}
-            <form onSubmit={handleSaveShipment} className="space-y-4">
+            <form onSubmit={handleSaveShipment} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 overscroll-contain">
+                {/* Error Banner */}
+                {shipError && (
+                  <div className="p-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-300 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                    <span>{shipError}</span>
+                  </div>
+                )}
               {/* Consignment Title */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
@@ -3282,12 +3282,12 @@ export default function AdminDashboardPage() {
 
               {/* Live YouTube Embed Preview */}
               {getYouTubeEmbedUrl(shipFormData.mediaLink) && (
-                <div className="rounded-xl border border-white/10 bg-black/40 p-3 space-y-1.5">
+                <div className="rounded-xl border border-white/10 bg-black/40 p-3 space-y-2">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-cyan-400">
                     <Play className="w-3.5 h-3.5 fill-current" />
                     <span>Live YouTube Player Preview</span>
                   </div>
-                  <div className="relative w-full pb-[56.25%] rounded-lg overflow-hidden border border-white/10 bg-black">
+                  <div className="relative w-full max-w-md mx-auto aspect-video rounded-lg overflow-hidden border border-white/10 bg-black shadow-md">
                     <iframe
                       src={getYouTubeEmbedUrl(shipFormData.mediaLink)!}
                       title="YouTube Preview"
@@ -3316,47 +3316,48 @@ export default function AdminDashboardPage() {
                   }}
                 />
               </div>
+            </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsShipModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl border text-xs font-semibold hover:bg-white/5 transition-colors cursor-pointer"
-                  style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-secondary)' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingShipment}
-                  className="btn-gold flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold tracking-wider uppercase shadow-xl cursor-pointer"
-                >
-                  {isSavingShipment ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <span>{editingShipment ? 'Update Consignment' : 'Save Consignment'}</span>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
+            {/* Pinned Action Buttons Footer */}
+            <div className="flex items-center justify-end gap-3 p-4 sm:p-5 border-t shrink-0 bg-black/40" style={{ borderColor: 'var(--border-subtle)' }}>
+              <button
+                type="button"
+                onClick={() => setIsShipModalOpen(false)}
+                className="px-5 py-2.5 rounded-xl border text-xs font-semibold hover:bg-white/5 transition-colors cursor-pointer"
+                style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-secondary)' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSavingShipment}
+                className="btn-gold flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold tracking-wider uppercase shadow-xl cursor-pointer"
+              >
+                {isSavingShipment ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <span>{editingShipment ? 'Update Consignment' : 'Save Consignment'}</span>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
+    )}
 
       {/* ========================================================
           MODAL 1: ADD / EDIT PRODUCT LINE DIALOG
           ======================================================== */}
       {isPlModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden"
           style={{ backgroundColor: 'var(--modal-overlay)', backdropFilter: 'blur(8px)' }}
         >
           <div 
-            className="relative w-full max-w-xl my-8 rounded-2xl border shadow-2xl p-6 sm:p-8 space-y-6"
+            className="relative w-full max-w-xl max-h-[92vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden"
             style={{
               backgroundColor: 'var(--bg-card)',
               borderColor: 'var(--border-card)',
@@ -3364,129 +3365,130 @@ export default function AdminDashboardPage() {
             }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--border-subtle)' }}>
+            <div className="flex items-center justify-between border-b p-5 sm:p-6 shrink-0" style={{ borderColor: 'var(--border-subtle)' }}>
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl border" style={{ backgroundColor: 'var(--gold-muted)', borderColor: 'var(--gold-border)' }}>
+                <div className="p-2 rounded-xl border shrink-0" style={{ backgroundColor: 'var(--gold-muted)', borderColor: 'var(--gold-border)' }}>
                   <Layers className="w-5 h-5" style={{ color: 'var(--gold)' }} />
                 </div>
                 <div>
-                  <h3 className="font-serif text-xl sm:text-2xl font-normal" style={{ color: 'var(--text-primary)' }}>
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
                     {editingProductLine ? 'Update Product Line' : 'Add New Product Line / Requirement'}
                   </h3>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  <p className="text-xs text-muted-grey">
                     {editingProductLine ? 'Modify configuration and dropdown parameters' : 'Will appear dynamically in the buyer quotation modal'}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsPlModalOpen(false)}
-                className="p-2 rounded-full border hover:border-gold-border cursor-pointer"
-                style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}
+                className="p-2 rounded-lg hover:bg-white/10 cursor-pointer text-muted-grey hover:text-white"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Error & Success Messages */}
-            {plError && (
-              <div className="p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-xs flex items-center gap-2.5">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{plError}</span>
-              </div>
-            )}
-            {plSuccess && (
-              <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs flex items-center gap-2.5">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>{plSuccess}</span>
-              </div>
-            )}
-
             {/* Form */}
-            <form onSubmit={handleSaveProductLine} className="space-y-5 text-sm">
-              <div>
-                <label className="block font-bold mb-1.5" style={{ color: 'var(--gold)' }}>
-                  Product Line / Requirement Name <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={plFormData.name}
-                  onChange={(e) => setPlFormData({ ...plFormData, name: e.target.value })}
-                  placeholder="e.g. 1121 Sella Basmati Rice / Sona Masoori Raw"
-                  className="input-luxury py-3 px-4 text-sm sm:text-base rounded-xl font-medium"
-                />
-              </div>
+            <form onSubmit={handleSaveProductLine} className="flex-1 flex flex-col min-h-0 overflow-hidden text-sm">
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 overscroll-contain">
+                {/* Error & Success Messages */}
+                {plError && (
+                  <div className="p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-xs flex items-center gap-2.5">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{plError}</span>
+                  </div>
+                )}
+                {plSuccess && (
+                  <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs flex items-center gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>{plSuccess}</span>
+                  </div>
+                )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-bold mb-1.5" style={{ color: 'var(--gold)' }}>
-                    Commodity Category <span className="text-red-400">*</span>
+                    Product Line / Requirement Name <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    value={plFormData.category}
-                    onChange={(e) => setPlFormData({ ...plFormData, category: e.target.value })}
-                    placeholder="e.g. Spices & Herbs / Rice & Grains"
+                    value={plFormData.name}
+                    onChange={(e) => setPlFormData({ ...plFormData, name: e.target.value })}
+                    placeholder="e.g. 1121 Sella Basmati Rice / Sona Masoori Raw"
                     className="input-luxury py-3 px-4 text-sm sm:text-base rounded-xl font-medium"
                   />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold mb-1.5" style={{ color: 'var(--gold)' }}>
+                      Commodity Category <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={plFormData.category}
+                      onChange={(e) => setPlFormData({ ...plFormData, category: e.target.value })}
+                      placeholder="e.g. Spices & Herbs / Rice & Grains"
+                      className="input-luxury py-3 px-4 text-sm sm:text-base rounded-xl font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold mb-1.5" style={{ color: 'var(--gold)' }}>
+                      Default Trade Unit
+                    </label>
+                    <input
+                      type="text"
+                      value={plFormData.defaultUnit}
+                      onChange={(e) => setPlFormData({ ...plFormData, defaultUnit: e.target.value })}
+                      placeholder="e.g. 20ft FCL / Metric Tons (MT)"
+                      className="input-luxury py-3 px-4 text-sm sm:text-base rounded-xl font-medium"
+                    />
+                  </div>
                 </div>
 
                 <div>
                   <label className="block font-bold mb-1.5" style={{ color: 'var(--gold)' }}>
-                    Default Trade Unit
+                    Technical Specifications / Commercial Description
                   </label>
-                  <input
-                    type="text"
-                    value={plFormData.defaultUnit}
-                    onChange={(e) => setPlFormData({ ...plFormData, defaultUnit: e.target.value })}
-                    placeholder="e.g. 20ft FCL / Metric Tons (MT)"
+                  <textarea
+                    rows={4}
+                    value={plFormData.description}
+                    onChange={(e) => setPlFormData({ ...plFormData, description: e.target.value })}
+                    placeholder="Commercial grade, grain length, moisture specifications, purity parameters..."
                     className="input-luxury py-3 px-4 text-sm sm:text-base rounded-xl font-medium"
                   />
                 </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={plFormData.isActive}
+                      onChange={(e) => setPlFormData({ ...plFormData, isActive: e.target.checked })}
+                      className="w-5 h-5 accent-[#0284c7] rounded cursor-pointer"
+                    />
+                    <span className="font-bold text-sm sm:text-base" style={{ color: 'var(--text-primary)' }}>
+                      Active in Quotation Form (Visible in Buyer Dropdown)
+                    </span>
+                  </label>
+                </div>
               </div>
 
-              <div>
-                <label className="block font-bold mb-1.5" style={{ color: 'var(--gold)' }}>
-                  Technical Specifications / Commercial Description
-                </label>
-                <textarea
-                  rows={4}
-                  value={plFormData.description}
-                  onChange={(e) => setPlFormData({ ...plFormData, description: e.target.value })}
-                  placeholder="Commercial grade, grain length, moisture specifications, purity parameters..."
-                  className="input-luxury py-3 px-4 text-sm sm:text-base rounded-xl font-medium"
-                />
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={plFormData.isActive}
-                    onChange={(e) => setPlFormData({ ...plFormData, isActive: e.target.checked })}
-                    className="w-5 h-5 accent-[#0284c7] rounded cursor-pointer"
-                  />
-                  <span className="font-bold text-sm sm:text-base" style={{ color: 'var(--text-primary)' }}>
-                    Active in Quotation Form (Visible in Buyer Dropdown)
-                  </span>
-                </label>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center justify-end gap-4 pt-4 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+              {/* Actions Footer */}
+              <div className="flex items-center justify-end gap-3 p-4 sm:p-5 border-t shrink-0 bg-black/40" style={{ borderColor: 'var(--border-subtle)' }}>
                 <button
                   type="button"
                   onClick={() => setIsPlModalOpen(false)}
-                  className="px-5 py-3 rounded-xl text-sm font-bold uppercase tracking-wider"
-                  style={{ color: 'var(--text-muted)' }}
+                  className="px-5 py-2.5 rounded-xl border text-xs font-semibold hover:bg-white/5 transition-colors cursor-pointer"
+                  style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-secondary)' }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingPl}
-                  className="btn-glass-morphism px-6 py-3.5 text-sm sm:text-base font-bold tracking-wide cursor-pointer shadow-lg"
+                  className="btn-glass-morphism px-6 py-2.5 text-xs sm:text-sm font-bold tracking-wide cursor-pointer shadow-lg"
                 >
                   {isSavingPl ? (
                     <span>Saving Option...</span>
@@ -3509,7 +3511,7 @@ export default function AdminDashboardPage() {
           style={{ backgroundColor: 'var(--modal-overlay)', backdropFilter: 'blur(8px)' }}
         >
           <div 
-            className="relative w-full max-w-4xl my-8 rounded-2xl border shadow-2xl p-8 sm:p-10 space-y-6"
+            className="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto my-4 sm:my-8 rounded-2xl border shadow-2xl p-6 sm:p-8 space-y-6"
             style={{
               backgroundColor: 'var(--bg-card)',
               borderColor: 'var(--border-card)',
