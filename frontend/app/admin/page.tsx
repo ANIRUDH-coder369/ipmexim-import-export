@@ -1058,7 +1058,7 @@ export default function AdminDashboardPage() {
   const handleSaveShipment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!shipFormData.fromLocation.trim() || !shipFormData.toLocation.trim() || !shipFormData.date || !shipFormData.mediaLink.trim()) {
-      setShipError('Please fill in From Location, Destination, Date, and Media Link.');
+      setShipError('Please fill in From, To, Date, and Video Link.');
       return;
     }
 
@@ -3467,10 +3467,10 @@ export default function AdminDashboardPage() {
                     <span>{shipError}</span>
                   </div>
                 )}
-              {/* Consignment Title */}
+              {/* Title */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                  Consignment Title / Cargo
+                  Title <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
@@ -3487,11 +3487,11 @@ export default function AdminDashboardPage() {
                 />
               </div>
 
-              {/* Origin (Where From) & Reach Destination (To) */}
+              {/* From & To */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    Origin Location (Where From) *
+                    From <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -3510,7 +3510,7 @@ export default function AdminDashboardPage() {
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    Reach Destination (To Port / Country) *
+                    To <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -3528,11 +3528,11 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              {/* Calendar Date & Status */}
+              {/* Date & Status */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    Dispatch / Shipment Date (Calendar) *
+                    Date <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="date"
@@ -3571,10 +3571,10 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              {/* Video / Media Link */}
+              {/* Video Link */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                  Video / Proof Media Link (YouTube, Tracking, or Footage) *
+                  Video Link <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="url"
@@ -3612,10 +3612,10 @@ export default function AdminDashboardPage() {
                 </div>
               )}
 
-              {/* Notes / Description */}
+              {/* Notes (Optional) */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                  Transit Notes / Description (Optional)
+                  Notes (Optional)
                 </label>
                 <textarea
                   rows={2}
